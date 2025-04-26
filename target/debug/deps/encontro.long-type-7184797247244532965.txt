@@ -1,0 +1,1 @@
+fn(HttpRequest, actix_web::web::Payload, actix_web::web::Path<String>, Data<Arc<tokio::sync::Mutex<HashMap<Box<str>, HashMap<usize, WsConn>>>>>) -> impl std::future::Future<Output = Result<HttpResponse, actix_web::Error>> {ws_route}
