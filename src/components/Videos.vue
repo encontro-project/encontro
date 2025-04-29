@@ -12,12 +12,12 @@ const store = useConnectionsStore()
 
 const {
   getMediaTracks,
-  initializeCodecs,
   setupPeer,
   handlePeerDisconnect,
   handleIceCandidate,
   handleSdpSignal,
   updateStream,
+  shareScreen
 } = store
 
 const localVideo = ref<null | HTMLVideoElement>(null)
@@ -41,18 +41,21 @@ const gotMessageFromServer = (message: MessageEvent) => {
     return
   }
 
-  if (peerUuid === localUuid.value || (signal.dest !== localUuid.value && signal.dest !== 'all'))
-    return
-  console.log('msg', peerConnections.value, peerUuid)
-
+  console.log(signal.type, peerConnections.value, peerUuid)
   if (signal.type === 'peer-disconnect') {
     handlePeerDisconnect(peerUuid)
     return
   }
+  if (signal.type == "get-tracks") {
+    shareScreen(peerUuid)
+  }
+  if (peerUuid === localUuid.value || (signal.dest !== localUuid.value && signal.dest !== 'all'))
+  return
+
 
   if (signal.displayName && signal.dest === 'all') {
-    setupPeer(wsRef.value, peerUuid, signal.displayName)
-    wsRef.value!.send(
+    setupPeer(wsRef.value, peerUuid, signal.displayName, false)
+    wsRef.value?.send(
       JSON.stringify({
         displayName: localDisplayName.value,
         uuid: localUuid.value,
@@ -97,13 +100,19 @@ const initWebSocket = () => {
 }
 
 const handleConnectionStart = async () => {
-  await getTracks()
   initWebSocket()
 }
 
 const handleStreamChange = async () => {
   await getTracks()
   updateStream()
+}
+
+const handleStreamStart = async () => {
+  await getTracks()
+  Object.values(peerConnections.value).forEach((peerConnection) => {
+    shareScreen(peerConnection.uuid)
+  })
 }
 
 watch(
@@ -114,7 +123,6 @@ watch(
       console.log('cleanup')
     }
     if (newSocket) {
-      console.log('niggers')
       newSocket.onmessage = (e) => {
         gotMessageFromServer(e)
       }
@@ -126,12 +134,15 @@ watch(
 </script>
 
 <template>
-  <button @click="handleConnectionStart">get tracks</button>
-  <button @click="initializeCodecs">Пенис</button>
+  <button @click="handleConnectionStart">connect</button>
   <button @click="handleStreamChange">stream change</button>
+  <button @click="handleStreamStart">share screen</button>
   <div class="videos-container">
     <div class="video-container" v-if="localStream?.active">
       <video ref="localVideo" autoplay class="rtc-stream"></video>
+    </div>
+    <div v-else-if="isConnected" class="video-template">
+      <img class="user-pic" src="https://e7.pngegg.com/pngimages/719/959/png-clipart-celebes-crested-macaque-monkey-selfie-grapher-people-for-the-ethical-treatment-of-animals-funny-mammal-animals-thumbnail.png"></img>
     </div>
     <TestVideo
       v-for="(peerConnection, i) in peerConnections"
@@ -151,6 +162,20 @@ watch(
   background-color: black;
   width: 600px;
   height: 400px;
+}
+.video-template {
+  background-color: aqua;
+  width: 600px;
+  height: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.user-pic {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
 }
 .rtc-stream {
   width: 600px;

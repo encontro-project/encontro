@@ -36,10 +36,13 @@ watchEffect(() => {
 </script>
 
 <template>
-  <div class="video-container" v-if="props.peerConnection.videoStream">
+  <div class="video-container" v-if="videoStreamRef">
     <video ref="videoRef" autoplay class="rtc-stream"></video>
     <p>{{ peerConnection.uuid }}</p>
   </div>
+  <div v-else class="video-template">
+      <img class="user-pic" src="https://e7.pngegg.com/pngimages/719/959/png-clipart-celebes-crested-macaque-monkey-selfie-grapher-people-for-the-ethical-treatment-of-animals-funny-mammal-animals-thumbnail.png"></img>
+    </div>
 </template>
 
 <style scoped></style>

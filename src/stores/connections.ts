@@ -110,7 +110,7 @@ export const useConnectionsStore = defineStore('connections', {
     handlePeerDisconnect(peerUuid: string) {
       console.log(`Peer ${peerUuid} disconnected`)
       this.$patch((state: IState) => {
-        state.peerConnections[peerUuid].pc.close()
+        state.peerConnections[peerUuid]?.pc.close()
         delete state.peerConnections[peerUuid]
       })
     },
@@ -131,115 +131,6 @@ export const useConnectionsStore = defineStore('connections', {
         }),
       )
     },
-    async initializeCodecs() {
-      if (!('MediaStreamTrackProcessor' in window)) {
-        console.log('MediaStreamTrackProcessor not found')
-        return
-      }
-
-      console.log(MediaStreamTrackGenerator)
-      const videoTrack = this.localStream?.getVideoTracks()[0]
-      const audioTrack = this.localStream?.getAudioTracks()[0]
-
-      const videoProcessor = new MediaStreamTrackProcessor({
-        track: videoTrack as MediaStreamVideoTrack,
-      })
-      const videoReader = videoProcessor.readable.getReader()
-
-      this.videoEncoder = new VideoEncoder({
-        output: (encodedChunk: EncodedVideoChunk) => {
-          const data = new ArrayBuffer(encodedChunk.byteLength)
-          const view = new Uint8Array(data)
-          encodedChunk.copyTo(view)
-
-          Object.values(this.peerConnections).forEach((peer) => {
-            if (peer.dataChannel?.readyState === 'open') {
-              peer.dataChannel.send(
-                JSON.stringify({
-                  type: encodedChunk.type,
-                  timestamp: encodedChunk.timestamp,
-                  duration: encodedChunk.duration,
-                }),
-              )
-              peer.dataChannel.send(data)
-            }
-          })
-        },
-        error: (e) => console.error(e),
-      })
-
-      this.videoEncoder.configure(VIDEO_ENCODER_CFG)
-
-      const processVideoFrames = async () => {
-        try {
-          while (true) {
-            const { value: frame, done } = await videoReader.read()
-            if (done) break
-            if (this.videoEncoder?.state === 'configured') {
-              this.videoEncoder?.encode(frame)
-            }
-            frame.close()
-          }
-          await this.videoEncoder?.flush()
-          this.videoEncoder?.close()
-        } catch (e) {
-          console.error('Error processing frames:', e)
-        }
-      }
-
-      processVideoFrames()
-
-      if (audioTrack && 'AudioEncoder' in window) {
-        console.log(audioTrack.getSettings())
-        const audioProcessor = new MediaStreamTrackProcessor({ track: audioTrack })
-        const audioReader = audioProcessor.readable.getReader()
-
-        this.audioEncoder = new AudioEncoder({
-          output: (encodedChunk: EncodedAudioChunk) => {
-            const data = new ArrayBuffer(encodedChunk.byteLength)
-            const view = new Uint8Array(data)
-            encodedChunk.copyTo(view)
-
-            Object.values(this.peerConnections).forEach((peer) => {
-              if (peer.dataChannel?.readyState === 'open') {
-                peer.dataChannel.send(
-                  JSON.stringify({
-                    type: 'audio',
-                    timestamp: encodedChunk.timestamp,
-                    duration: encodedChunk.duration,
-                  }),
-                )
-                peer.dataChannel.send(data)
-              }
-            })
-          },
-          error: (e) => console.error('Audio Encoder Error:', e),
-        })
-
-        this.audioEncoder.configure(AUDIO_ENCODER_CFG)
-
-        const processAudioFrames = async () => {
-          try {
-            while (true) {
-              const { value: frame, done } = await audioReader.read()
-              if (done) break
-              if (this.audioEncoder?.state === 'configured' && frame) {
-                try {
-                  this.audioEncoder.encode(frame)
-                } catch (e) {
-                  console.error('Error encoding audio frame:', e)
-                }
-              }
-              frame.close()
-            }
-          } catch (e) {
-            console.error('Error processing audio frames:', e)
-          }
-        }
-
-        processAudioFrames()
-      }
-    },
 
     gotIceCandidate(
       event: RTCPeerConnectionIceEvent,
@@ -258,7 +149,7 @@ export const useConnectionsStore = defineStore('connections', {
     },
 
     checkPeerDisconnect(peerUuid: string): void {
-      const state = this.peerConnections[peerUuid]?.pc.iceConnectionState
+      const state = this.peerConnections[peerUuid]?.pc.connectionState
       if (['failed', 'closed', 'disconnected'].includes(state)) {
         this.handlePeerDisconnect(peerUuid)
       }
@@ -282,129 +173,51 @@ export const useConnectionsStore = defineStore('connections', {
         .catch((e: Error) => console.log(e))
     },
 
+    shareScreen(peerUuid: string) {
+      if (this.localStream) {
+        console.log(this.localStream.getTracks())
+        this.localStream.getTracks().forEach((track) => {
+          this.peerConnections[peerUuid].pc.addTrack(track, this.localStream as MediaStream)
+        })
+      }
+    },
+
     setupPeer(
       serverConnection: WebSocket,
       peerUuid: string,
       displayName: string,
-      initCall = false,
+      initCall: boolean,
     ) {
       const peerConnection: PeerConnection = {
         displayName,
-        uuid: this.localUuid,
+        uuid: peerUuid,
         pc: new RTCPeerConnection(PEER_CONNECTION_CFG),
       }
 
-      const onDataChannelOpen = async () => {
-        if (!('VideoDecoder' in window)) {
-          console.log('no videoDecoder')
-          return
-        }
-
-        console.log('videoDecoder')
-        peerConnection.videoDecoder = new VideoDecoder({
-          output: (frame: VideoFrame) => {
-            if (!videoStreamGenerator) {
-              videoStreamGenerator = new MediaStreamTrackGenerator({
-                kind: 'video',
-              })
-              videoWritable = videoStreamGenerator.writable.getWriter()
-              this.peerConnections[peerUuid].videoStream = new MediaStream([videoStreamGenerator])
-            }
-
-            videoWritable!.write(frame)
-          },
-          error: (e) => console.error(e),
-        })
-
-        peerConnection.videoDecoder.configure(VIDEO_DECODER_CFG)
-
-        if ('AudioDecoder' in window) {
-          console.log('AudioDecoder')
-          peerConnection.audioDecoder = new AudioDecoder({
-            output: async (audioData: AudioData) => {
-              if (!audioStreamGenerator) {
-                audioStreamGenerator = new MediaStreamTrackGenerator({
-                  kind: 'audio',
-                })
-                audioWritable = audioStreamGenerator.writable.getWriter()
-              }
-              this.peerConnections[peerUuid].audioStream = new MediaStream([audioStreamGenerator])
-              audioWritable!.write(audioData)
-            },
-            error: (e) => console.error('Audio decoder error:', e),
-          })
-
-          peerConnection.audioDecoder.configure(AUDIO_DECODER_CFG)
-        }
-
-        this.initializeCodecs()
+      peerConnection.pc.onnegotiationneeded = () => {
+        peerConnection.pc
+          .createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true })
+          .then((description) => this.createdDescription(description, peerUuid, serverConnection))
+          .catch((e) => console.log(e))
       }
 
-      const onDataChannelMessage = async (event: MessageEvent) => {
-        if (typeof event.data === 'string') {
-          metadata = JSON.parse(event.data)
-        } else if (metadata.type === 'delta' || metadata.type == 'key') {
-          if (metadata.type == 'key') {
-          }
-          const chunk = new EncodedVideoChunk({
-            type: 'key',
-            timestamp: metadata.timestamp,
-            duration: metadata.duration,
-            data: event.data,
-          })
-
-          if (peerConnection.videoDecoder?.state === 'configured') {
-            try {
-              peerConnection.videoDecoder.decode(chunk)
-            } catch (error) {
-              console.log('decoding error')
-            }
-          }
-        } else if (event.data.type === 'audio') {
-          const chunk = new EncodedAudioChunk({
-            type: 'key',
-            timestamp: metadata.timestamp,
-            duration: metadata.duration,
-            data: event.data,
-          })
-
-          if (peerConnection.audioDecoder?.state === 'configured') {
-            peerConnection.audioDecoder.decode(chunk)
-          }
+      peerConnection.pc.onconnectionstatechange = (e) => {
+        this.checkPeerDisconnect(peerUuid)
+        const state = this.peerConnections[peerUuid]?.pc.connectionState
+        if (state == 'connected') {
+          serverConnection.send(
+            JSON.stringify({
+              uuid: this.localUuid,
+              type: 'get-tracks',
+            }),
+          )
         }
       }
 
-      const dataChannel = peerConnection.pc.createDataChannel('media-channel')
-      peerConnection.dataChannel = dataChannel
-
-      let metadata: any
-
-      let videoWritable: WritableStreamDefaultWriter<VideoFrame> | undefined
-      let videoStreamGenerator: MediaStreamTrackGenerator<VideoFrame> | undefined
-
-      let audioStreamGenerator: MediaStreamTrackGenerator<AudioData> | undefined
-      let audioWritable: WritableStreamDefaultWriter<AudioData> | undefined
-
-      peerConnection.dataChannel.onopen = onDataChannelOpen
-
-      peerConnection.dataChannel.onmessage = onDataChannelMessage
       peerConnection.pc.onicecandidate = (event) =>
         this.gotIceCandidate(event, peerUuid, serverConnection)
-      peerConnection.pc.oniceconnectionstatechange = () => this.checkPeerDisconnect(peerUuid)
-      if (this.localStream) {
-        console.log(this.localStream.getTracks())
-        this.localStream.getTracks().forEach((track) => {
-          peerConnection.pc.addTrack(track, this.localStream as MediaStream)
-        })
-      }
 
       if (initCall) {
-        peerConnection.pc.ondatachannel = (event) => {
-          peerConnection.dataChannel = event.channel
-          peerConnection.dataChannel.onmessage = onDataChannelMessage
-          peerConnection.dataChannel.onopen = onDataChannelOpen
-        }
-
         peerConnection.pc
           .createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true })
           .then((description) => this.createdDescription(description, peerUuid, serverConnection))

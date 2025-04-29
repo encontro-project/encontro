@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import Home from './components/Home.vue'
+import Videos from './components/Videos.vue'
 </script>
 
 <template>
-  <Home></Home>
+  <Videos></Videos>
 </template>
 
 <style scoped></style>
