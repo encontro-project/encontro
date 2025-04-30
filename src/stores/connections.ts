@@ -4,7 +4,7 @@ import type { PeerConnection } from '@/types'
 
 //TODO (1) Переписать на composition api
 
-//TODO (1) Использовать MediaStreams api вместо dataChannels
+//TODO (3) Добавить логику разных каналов
 
 interface IState {
   peerConnections: {
@@ -122,9 +122,11 @@ export const useConnectionsStore = defineStore('connections', {
             const audioTrack = this.localStream?.getAudioTracks()[0]
             console.log(audioTrack)
             if (sender.track?.kind == 'video') {
+              connection.ssVideoSender = sender
               sender.replaceTrack(videoTrack as MediaStreamTrack)
             }
             if (sender.track?.kind == 'audio') {
+              connection.ssAudioSender = sender
               sender.replaceTrack(audioTrack as MediaStreamTrack)
             }
           } catch {}
@@ -173,11 +175,71 @@ export const useConnectionsStore = defineStore('connections', {
         .catch((e: Error) => console.log(e))
     },
 
+    stopStream(peerUuid: string) {
+      const peerConnection = this.peerConnections[peerUuid]
+      if (peerConnection.ssVideoSender) {
+        peerConnection.pc.removeTrack(peerConnection.ssVideoSender)
+      }
+      if (peerConnection.ssAudioSender) {
+        peerConnection.pc.removeTrack(peerConnection.ssAudioSender)
+      }
+    },
+
+    unsubscribeFromStream(peerUuid: string) {
+      const peerConnection = this.peerConnections[peerUuid]
+
+      peerConnection.pc.getReceivers().forEach((rec) => {
+        rec.track.enabled = false
+      })
+      peerConnection.ssVideoStream = null
+    },
+
+    leaveCall(serverConnection: WebSocket) {
+      serverConnection.send(
+        JSON.stringify({
+          type: 'peer-disconnect',
+          uuid: this.localUuid,
+        }),
+      )
+      this.peerConnections = {}
+      Object.values(this.peerConnections).forEach((peerConnection) => {
+        peerConnection.pc.close()
+      })
+    },
+
+    updateTrack() {
+      Object.values(this.peerConnections).forEach((connection) =>
+        connection.pc.getSenders().forEach((sender) => {
+          try {
+            const videoTrack = this.localStream?.getVideoTracks()[0]
+            const audioTrack = this.localStream?.getAudioTracks()[0]
+            console.log(audioTrack)
+            if (sender.track?.kind == 'video') {
+              sender.replaceTrack(videoTrack as MediaStreamTrack)
+            }
+            if (sender.track?.kind == 'audio') {
+              sender.replaceTrack(audioTrack as MediaStreamTrack)
+            }
+          } catch {}
+        }),
+      )
+    },
+
     shareScreen(peerUuid: string) {
       if (this.localStream) {
         console.log(this.localStream.getTracks())
         this.localStream.getTracks().forEach((track) => {
-          this.peerConnections[peerUuid].pc.addTrack(track, this.localStream as MediaStream)
+          if (track.kind == 'video') {
+            this.peerConnections[peerUuid].ssAudioTrack = track
+            this.peerConnections[peerUuid].ssVideoSender = this.peerConnections[
+              peerUuid
+            ].pc.addTrack(track, this.localStream as MediaStream)
+          }
+          if (track.kind == 'audio') {
+            this.peerConnections[peerUuid].ssAudioSender = this.peerConnections[
+              peerUuid
+            ].pc.addTrack(track, this.localStream as MediaStream)
+          }
         })
       }
     },
@@ -191,7 +253,14 @@ export const useConnectionsStore = defineStore('connections', {
       const peerConnection: PeerConnection = {
         displayName,
         uuid: peerUuid,
+        ssVideoStream: null,
         pc: new RTCPeerConnection(PEER_CONNECTION_CFG),
+      }
+
+      peerConnection.pc.ontrack = (e) => {
+        if (e.streams && e.streams.length > 0) {
+          this.peerConnections[peerUuid].ssVideoStream = e.streams[0]
+        }
       }
 
       peerConnection.pc.onnegotiationneeded = () => {

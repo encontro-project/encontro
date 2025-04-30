@@ -117,7 +117,6 @@ async fn ws_route(rq: HttpRequest, stream: Payload, room: Path::<String>, rooms:
         room: room.into_inner().into_boxed_str(),
         rooms: rooms.clone(),
     };
-    println!("pososi");
 
     ws::start(actor, &rq, stream)
 }

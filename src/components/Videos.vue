@@ -17,7 +17,10 @@ const {
   handleIceCandidate,
   handleSdpSignal,
   updateStream,
-  shareScreen
+  shareScreen,
+  stopStream,
+  unsubscribeFromStream,
+  leaveCall
 } = store
 
 const localVideo = ref<null | HTMLVideoElement>(null)
@@ -25,10 +28,11 @@ const localVideo = ref<null | HTMLVideoElement>(null)
 const { localStream, localUuid, peerConnections, localDisplayName } = storeToRefs(store)
 
 onUnmounted(() => {
+
   wsRef.value?.send(
     JSON.stringify({
       type: 'peer-disconnect',
-      uuid: localUuid,
+      uuid: localUuid.value,
     }),
   )
 })
@@ -41,13 +45,21 @@ const gotMessageFromServer = (message: MessageEvent) => {
     return
   }
 
+
   console.log(signal.type, peerConnections.value, peerUuid)
   if (signal.type === 'peer-disconnect') {
     handlePeerDisconnect(peerUuid)
     return
   }
-  if (signal.type == "get-tracks") {
-    shareScreen(peerUuid)
+  if (signal.type == "get-tracks" && peerUuid != localUuid.value) {
+    if (!peerConnections.value[peerUuid].ssVideoStream) {
+      shareScreen(peerUuid)
+    }
+  }
+  if (signal.type == "stop-stream" && peerUuid != localUuid.value) {
+    if (peerConnections.value[peerUuid].ssVideoStream) {
+      unsubscribeFromStream(peerUuid)
+    }
   }
   if (peerUuid === localUuid.value || (signal.dest !== localUuid.value && signal.dest !== 'all'))
   return
@@ -115,6 +127,22 @@ const handleStreamStart = async () => {
   })
 }
 
+const handleStreamStop = () => {
+  wsRef.value?.send(
+    JSON.stringify({
+      uuid: localUuid.value,
+      type: 'stop-stream',
+      }),
+      )
+  
+}
+
+const handleLeaveCall = () => {
+  if (wsRef.value){
+    leaveCall(wsRef.value)
+  }
+}
+
 watch(
   wsRef,
   (newSocket, oldSocket) => {
@@ -137,6 +165,8 @@ watch(
   <button @click="handleConnectionStart">connect</button>
   <button @click="handleStreamChange">stream change</button>
   <button @click="handleStreamStart">share screen</button>
+  <button @click="handleStreamStop">stop stream</button>
+  <button @click="handleLeaveCall">Quit Call</button>
   <div class="videos-container">
     <div class="video-container" v-if="localStream?.active">
       <video ref="localVideo" autoplay class="rtc-stream"></video>
@@ -155,9 +185,11 @@ watch(
 <style>
 .videos-container {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  max-width: 100vw;
+  grid-template-columns: repeat(3, 600px);
   gap: 20px;
 }
+
 .video-container {
   background-color: black;
   width: 600px;
@@ -180,5 +212,15 @@ watch(
 .rtc-stream {
   width: 600px;
   height: 400px;
+}
+@media (max-width: 1859px) {
+  .videos-container {
+    grid-template-columns: repeat(2, 600px);
+  }
+}
+@media (max-width: 1239px) {
+  .videos-container{
+    grid-template-columns: repeat(1, 600px);
+  }
 }
 </style>

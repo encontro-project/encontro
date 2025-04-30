@@ -1,9 +1,12 @@
 export type PeerConnection = {
   displayName: string
   pc: RTCPeerConnection
-  dataChannel?: RTCDataChannel
-  videoStream?: MediaStream
-  audioStream?: MediaStream
-  videoDecoder?: VideoDecoder
-  audioDecoder?: AudioDecoder
+  uuid: string
+  ssVideoStream: MediaStream | null
+  ssVideoTrack?: MediaStreamTrack
+  ssAudioSender?: RTCRtpSender
+  ssVideoSender?: RTCRtpSender
+  ssAudioTrack?: MediaStreamTrack | null
 }
+
+//ss stand for share screen
