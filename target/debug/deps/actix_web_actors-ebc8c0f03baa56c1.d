@@ -1,0 +1,9 @@
+C:\Users\Пользователь\Desktop\cv_generator\cv_generator\target\debug\deps\libactix_web_actors-ebc8c0f03baa56c1.rmeta: C:\Users\Пользователь\.cargo\registry\src\index.crates.io-6f17d22bba15001f\actix-web-actors-4.3.1+deprecated\src/lib.rs C:\Users\Пользователь\.cargo\registry\src\index.crates.io-6f17d22bba15001f\actix-web-actors-4.3.1+deprecated\src\context.rs C:\Users\Пользователь\.cargo\registry\src\index.crates.io-6f17d22bba15001f\actix-web-actors-4.3.1+deprecated\src\ws.rs
+
+C:\Users\Пользователь\Desktop\cv_generator\cv_generator\target\debug\deps\libactix_web_actors-ebc8c0f03baa56c1.rlib: C:\Users\Пользователь\.cargo\registry\src\index.crates.io-6f17d22bba15001f\actix-web-actors-4.3.1+deprecated\src/lib.rs C:\Users\Пользователь\.cargo\registry\src\index.crates.io-6f17d22bba15001f\actix-web-actors-4.3.1+deprecated\src\context.rs C:\Users\Пользователь\.cargo\registry\src\index.crates.io-6f17d22bba15001f\actix-web-actors-4.3.1+deprecated\src\ws.rs
+
+C:\Users\Пользователь\Desktop\cv_generator\cv_generator\target\debug\deps\actix_web_actors-ebc8c0f03baa56c1.d: C:\Users\Пользователь\.cargo\registry\src\index.crates.io-6f17d22bba15001f\actix-web-actors-4.3.1+deprecated\src/lib.rs C:\Users\Пользователь\.cargo\registry\src\index.crates.io-6f17d22bba15001f\actix-web-actors-4.3.1+deprecated\src\context.rs C:\Users\Пользователь\.cargo\registry\src\index.crates.io-6f17d22bba15001f\actix-web-actors-4.3.1+deprecated\src\ws.rs
+
+C:\Users\Пользователь\.cargo\registry\src\index.crates.io-6f17d22bba15001f\actix-web-actors-4.3.1+deprecated\src/lib.rs:
+C:\Users\Пользователь\.cargo\registry\src\index.crates.io-6f17d22bba15001f\actix-web-actors-4.3.1+deprecated\src\context.rs:
+C:\Users\Пользователь\.cargo\registry\src\index.crates.io-6f17d22bba15001f\actix-web-actors-4.3.1+deprecated\src\ws.rs:

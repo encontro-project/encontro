@@ -3,9 +3,14 @@ export type PeerConnection = {
   pc: RTCPeerConnection
   uuid: string
   ssVideoStream: MediaStream | null
+  microphoneStream: MediaStream | null
+  trackMetadata?: 'microphone' | 'screen-share' | 'webcam'
+  shareScreenStreamid?: string
+  microphoneStreamId?: string
   ssVideoTrack?: MediaStreamTrack
   ssAudioSender?: RTCRtpSender
   ssVideoSender?: RTCRtpSender
+  microphoneSender?: RTCRtpSender
   ssAudioTrack?: MediaStreamTrack | null
 }
 

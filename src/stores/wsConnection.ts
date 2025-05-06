@@ -26,13 +26,10 @@ export const useRoomWsStore = defineStore('roomWsStore', () => {
       : generateUUID(),
   )
 
-  console.log(localUuid)
-
   const initWebSocket = (room: string) => {
     roomWs.value = new WebSocket(`wss://localhost:8443/ws/${room}`)
 
     roomWs.value.onopen = () => {
-      console.log('penis')
       roomWs.value!.send(
         JSON.stringify({
           displayName: localDisplayName.value,
@@ -40,6 +37,7 @@ export const useRoomWsStore = defineStore('roomWsStore', () => {
           dest: 'all',
         }),
       )
+
       isWsConnected.value = true
     }
 

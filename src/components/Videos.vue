@@ -2,8 +2,10 @@
 import { useConnectionsStore } from '@/stores/rtcConnections'
 import { storeToRefs } from 'pinia'
 import { onUnmounted, ref, watch, watchEffect } from 'vue'
-import TestVideo from './TestVideo.vue'
+import User from './User.vue'
 import { useRoomWsStore } from '@/stores/wsConnection'
+import MicrophoneIcon from "./MicrophoneIcon.vue"
+import MicrophoneOffIcon from './MicrophoneOffIcon.vue'
 
 const rtcConnectionsStore = useConnectionsStore()
 
@@ -20,7 +22,11 @@ const {
   shareScreen,
   stopStream,
   unsubscribeFromStream,
-  leaveCall
+  leaveCall,
+  toggleMicrophone,
+  getMicrophoneTrack,
+  shareMicrophone,
+  setTrackMetadata,
 } = rtcConnectionsStore
 
 
@@ -29,12 +35,11 @@ const {initWebSocket, closeRoomWsConnection} = roomWsConnectionStore
 
 const localVideo = ref<null | HTMLVideoElement>(null)
 
-const {roomWs, isWsConnected} = storeToRefs(roomWsConnectionStore)
+const {roomWs, isWsConnected, localUuid, localDisplayName} = storeToRefs(roomWsConnectionStore)
 
-const { localStream, localUuid, peerConnections, localDisplayName } = storeToRefs(rtcConnectionsStore)
+const { localStream,  peerConnections, isMicrophoneOn } = storeToRefs(rtcConnectionsStore)
 
 onUnmounted(() => {
-
   roomWs.value?.send(
     JSON.stringify({
       type: 'peer-disconnect',
@@ -46,51 +51,61 @@ onUnmounted(() => {
 })
 
 
-const gotMessageFromServer = (message: MessageEvent) => {
+const gotMessageFromServer = async (message: MessageEvent) => {
     const signal = JSON.parse(message.data)
     const peerUuid = signal.uuid
 
-    console.log('zalupa')
 
     if (!roomWs.value) {
       return
     }
 
-    console.log(signal.type, peerConnections.value, peerUuid)
+    /* console.log(signal, peerConnections.value, peerUuid) */
     if (signal.type === 'peer-disconnect') {
       handlePeerDisconnect(peerUuid)
+        
       return
     }
     if (signal.type == 'get-tracks' && peerUuid != localUuid.value) {
-      if (!peerConnections.value[peerUuid].ssVideoStream) {
+      if (!peerConnections.value[peerUuid].ssVideoSender) {
         shareScreen(peerUuid)
       }
     }
+    if (signal.type == "get-microphone" && peerUuid != localUuid.value) {
+      if (!peerConnections.value[peerUuid].microphoneStream) {
+        shareMicrophone(peerUuid)
+      }
+    } 
     if (signal.type == 'stop-stream' && peerUuid != localUuid.value) {
       if (peerConnections.value[peerUuid].ssVideoStream) {
         unsubscribeFromStream(peerUuid)
       }
     }
     if (peerUuid === localUuid.value || (signal.dest !== localUuid.value && signal.dest !== 'all'))
-      return
-
-    if (signal.displayName && signal.dest === 'all') {
-      setupPeer(peerUuid, signal.displayName, false)
-      roomWs.value?.send(
-        JSON.stringify({
-          displayName: localDisplayName.value,
-          uuid: localUuid.value,
-          dest: peerUuid,
-        }),
-      )
-    } else if (signal.displayName && signal.dest === localUuid.value) {
-      setupPeer(peerUuid, signal.displayName, true)
-    } else if (signal.sdp) {
-      handleSdpSignal(signal, peerUuid)
-    } else if (signal.ice) {
-      handleIceCandidate(signal, peerUuid)
-    }
+    return
+  
+  if (signal.metadata) {
+    setTrackMetadata(peerUuid, signal.metadata)
   }
+  if (signal.displayName && signal.dest === 'all') {
+    
+    setupPeer(peerUuid, signal.displayName, false)
+    roomWs.value?.send(
+      JSON.stringify({
+        displayName: localDisplayName.value,
+        uuid: localUuid.value,
+        dest: peerUuid,
+      }),
+    )
+  } else if (signal.displayName && signal.dest === localUuid.value) {
+    setupPeer(peerUuid, signal.displayName, true)
+  } else if (signal.sdp) {
+    console.log("dest: ", signal.dest, "uuid: ", peerUuid)
+    await handleSdpSignal(signal, peerUuid)
+  } else if (signal.ice) {
+    handleIceCandidate(signal, peerUuid)
+  }
+}
 
 
 
@@ -106,12 +121,15 @@ const getTracks = async () => {
 
 const handleConnectionStart = async (room: string) => {
   initWebSocket(room)
+  await getMicrophoneTrack()
 }
 
 const handleStreamChange = async () => {
   await getTracks()
   updateStream()
 }
+
+
 
 const handleStreamStart = async () => {
   await getTracks()
@@ -184,17 +202,28 @@ watch(
   <button @click="handleStreamStop">stop stream</button>
   <button @click="handleLeaveCall">Quit Call</button>
   <div class="videos-container">
-    <div class="video-container" v-if="localStream">
-      <video ref="localVideo" autoplay muted class="rtc-stream"></video>
+    <div class="user-container" v-if="isWsConnected">
+      <div class="video-container" v-if="localStream">
+        <video ref="localVideo" autoplay muted class="rtc-stream"></video>
+      </div>
+      <div  class="video-template" v-else>
+        <img class="user-pic" src="https://e7.pngegg.com/pngimages/719/959/png-clipart-celebes-crested-macaque-monkey-selfie-grapher-people-for-the-ethical-treatment-of-animals-funny-mammal-animals-thumbnail.png"></img>
+      </div>
+      <div class="user-info">
+        <div class="microphone-status">
+          <MicrophoneIcon class="mic-icon" v-if="isMicrophoneOn" v-on:click="toggleMicrophone"></MicrophoneIcon>
+          <MicrophoneOffIcon class="mic-icon" v-else-if="!isMicrophoneOn" v-on:click="toggleMicrophone"></MicrophoneOffIcon>
+        </div>
+        <div class="display-name">
+          {{ localDisplayName }}
+        </div>
+      </div>
     </div>
-    <div v-else-if="isWsConnected" class="video-template">
-      <img class="user-pic" src="https://e7.pngegg.com/pngimages/719/959/png-clipart-celebes-crested-macaque-monkey-selfie-grapher-people-for-the-ethical-treatment-of-animals-funny-mammal-animals-thumbnail.png"></img>
-    </div>
-    <TestVideo
+    <User
       v-for="(peerConnection, i) in peerConnections"
       :key="i"
       :peer-connection="peerConnection"
-    ></TestVideo>
+    ></User>
   </div>
 </template>
 
@@ -204,6 +233,11 @@ watch(
   max-width: 100vw;
   grid-template-columns: repeat(3, 600px);
   gap: 20px;
+  
+}
+
+.user-container {
+  position: relative;
 }
 
 .video-container {
@@ -228,6 +262,26 @@ watch(
 .rtc-stream {
   width: 600px;
   height: 400px;
+}
+.user-info {
+  position: absolute;
+  left: 5px;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  display: flex;
+  gap: 5px;
+  padding: 3px 3px 3px 3px;
+  align-items: center;
+  bottom: 5px;
+  border-radius: 6px;
+}
+.mic-icon {
+  width: 24px;
+  height: 24px;
+  stroke: white;
+}
+.display-name {
+  font-size: 18px;
 }
 @media (max-width: 1859px) {
   .videos-container {

@@ -1,0 +1,10 @@
+C:\Users\Пользователь\Desktop\cv_generator\cv_generator\target\debug\deps\libactix_rt-a082ccc061a815bc.rmeta: C:\Users\Пользователь\.cargo\registry\src\index.crates.io-6f17d22bba15001f\actix-rt-2.10.0\src\lib.rs C:\Users\Пользователь\.cargo\registry\src\index.crates.io-6f17d22bba15001f\actix-rt-2.10.0\src\arbiter.rs C:\Users\Пользователь\.cargo\registry\src\index.crates.io-6f17d22bba15001f\actix-rt-2.10.0\src\runtime.rs C:\Users\Пользователь\.cargo\registry\src\index.crates.io-6f17d22bba15001f\actix-rt-2.10.0\src\system.rs
+
+C:\Users\Пользователь\Desktop\cv_generator\cv_generator\target\debug\deps\libactix_rt-a082ccc061a815bc.rlib: C:\Users\Пользователь\.cargo\registry\src\index.crates.io-6f17d22bba15001f\actix-rt-2.10.0\src\lib.rs C:\Users\Пользователь\.cargo\registry\src\index.crates.io-6f17d22bba15001f\actix-rt-2.10.0\src\arbiter.rs C:\Users\Пользователь\.cargo\registry\src\index.crates.io-6f17d22bba15001f\actix-rt-2.10.0\src\runtime.rs C:\Users\Пользователь\.cargo\registry\src\index.crates.io-6f17d22bba15001f\actix-rt-2.10.0\src\system.rs
+
+C:\Users\Пользователь\Desktop\cv_generator\cv_generator\target\debug\deps\actix_rt-a082ccc061a815bc.d: C:\Users\Пользователь\.cargo\registry\src\index.crates.io-6f17d22bba15001f\actix-rt-2.10.0\src\lib.rs C:\Users\Пользователь\.cargo\registry\src\index.crates.io-6f17d22bba15001f\actix-rt-2.10.0\src\arbiter.rs C:\Users\Пользователь\.cargo\registry\src\index.crates.io-6f17d22bba15001f\actix-rt-2.10.0\src\runtime.rs C:\Users\Пользователь\.cargo\registry\src\index.crates.io-6f17d22bba15001f\actix-rt-2.10.0\src\system.rs
+
+C:\Users\Пользователь\.cargo\registry\src\index.crates.io-6f17d22bba15001f\actix-rt-2.10.0\src\lib.rs:
+C:\Users\Пользователь\.cargo\registry\src\index.crates.io-6f17d22bba15001f\actix-rt-2.10.0\src\arbiter.rs:
+C:\Users\Пользователь\.cargo\registry\src\index.crates.io-6f17d22bba15001f\actix-rt-2.10.0\src\runtime.rs:
+C:\Users\Пользователь\.cargo\registry\src\index.crates.io-6f17d22bba15001f\actix-rt-2.10.0\src\system.rs:
