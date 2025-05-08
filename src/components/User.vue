@@ -16,17 +16,6 @@ const audioRef = ref<HTMLAudioElement | null>(null)
 const videoStreamRef = toRef(props.peerConnection, "ssVideoStream")
 const audioStreamRef = toRef(props.peerConnection, "microphoneStream")
 
-onMounted(() => {
- /*  props.peerConnection.pc.ontrack = (e) => {
-    console.log(e)
-    if (e.streams && e.streams.length > 0) {
-      // Always replace the entire stream
-      videoStreamRef.value = e.streams[0]
-      console.log(e.streams[0].getAudioTracks())
-    }
-  } */
-})
-
 watch([videoRef, videoStreamRef], ([newVideo, newStream], [oldVideo, oldStream]) => {
   if (oldStream) {
   }

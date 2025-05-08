@@ -4,11 +4,15 @@ import { ref, computed } from 'vue'
 import type { PeerConnection } from '@/types'
 import { useRoomWsStore } from './wsConnection'
 
-//TODO (4) Сделать нормальные cleanup функции
+// TODO (4) Сделать нормальные cleanup функции
 
-//TODO (4) Добавить захват микрофона/вебки
+// TODO (6) Добавить захват вебки
 
-//BUGFIX (5) После реконнекта через перезагрузку страницы не отправляются/не получаются треки
+// TODO (6) Добавить выбор устройств через менюшку
+
+// FIXME (6) при первой загрузке страницы не проигрываются все треки
+// с микрофонв пиров несмотря на то что audioStreamRef у компонента есть
+// Надо найти способ это задебажить
 
 const VIDEO_STREAM_WIDTH: number = 1920
 const VIDEO_STREAM_HEIGHT: number = 1080
@@ -36,8 +40,6 @@ export const useConnectionsStore = defineStore('connections', () => {
   const localStream = ref<MediaStream | null>(null)
   const isMicrophoneOn = ref<boolean>(false)
   const microphoneStream = ref<MediaStream | null>(null)
-
-  const rtcConnectionQueue = ref<any>([])
 
   async function getMicrophoneTrack() {
     microphoneStream.value = await navigator.mediaDevices.getUserMedia({
@@ -97,6 +99,37 @@ export const useConnectionsStore = defineStore('connections', () => {
     )
   }
 
+  async function processNext(peerUuid: string, timeoutId?: number) {
+    const task = peerConnections.value[peerUuid].taskQueue.shift()
+    if (!timeoutId) {
+      timeoutId = setTimeout(() => {
+        throw new Error('exceeded time limit for task')
+      }, 6000)
+    }
+    if (task) {
+      console.log(task)
+      try {
+        await task()
+      } catch (e) {
+        console.log(e)
+      }
+    }
+    clearTimeout(timeoutId)
+
+    if (peerConnections.value[peerUuid].taskQueue.length > 0) {
+      console.log(timeoutId)
+      await processNext(peerUuid, timeoutId)
+    }
+  }
+
+  async function enqueueTask(peerUuid: string, task: (...args: any) => Promise<void>) {
+    peerConnections.value[peerUuid].taskQueue.push(task)
+
+    console.log(peerConnections.value[peerUuid].taskQueue)
+
+    await processNext(peerUuid)
+  }
+
   function gotIceCandidate(event: RTCPeerConnectionIceEvent, peerUuid: string) {
     if (event.candidate) {
       roomWs.value!.send(
@@ -117,7 +150,24 @@ export const useConnectionsStore = defineStore('connections', () => {
   }
 
   async function createdDescription(description: RTCSessionDescriptionInit, peerUuid: string) {
-    peerConnections.value[peerUuid].pc
+    enqueueTask(peerUuid, async () => {
+      peerConnections.value[peerUuid].pc
+        .setLocalDescription(description)
+        .then(() => {
+          roomWs.value!.send(
+            JSON.stringify({
+              sdp: peerConnections.value[peerUuid].pc.localDescription,
+              uuid: localUuid.value,
+              dest: peerUuid,
+            }),
+          )
+        })
+        .catch((e: Error) => {
+          console.log(e)
+        })
+    })
+
+    /*    peerConnections.value[peerUuid].pc
       .setLocalDescription(description)
       .then(() => {
         roomWs.value!.send(
@@ -130,7 +180,7 @@ export const useConnectionsStore = defineStore('connections', () => {
       })
       .catch((e: Error) => {
         console.log(e)
-      })
+      }) */
   }
 
   function toggleMicrophone() {
@@ -199,7 +249,7 @@ export const useConnectionsStore = defineStore('connections', () => {
     }
   }
 
-  function shareScreen(peerUuid: string) {
+  async function shareScreen(peerUuid: string) {
     if (localStream.value) {
       roomWs.value!.send(
         JSON.stringify({
@@ -220,6 +270,15 @@ export const useConnectionsStore = defineStore('connections', () => {
           ].pc.addTrack(track, localStream.value as MediaStream)
         }
       })
+
+      //форсим негошиейшен типа я лидер пиздец а ты пидор ебаный ПДВЗАЗХВЛПХЩЗРВЩЛЗХАЗЩЛВПЗЩОШЛАЩЗЛХВПЗОЩШЩЗ
+      enqueueTask(peerUuid, async () => {
+        const offer = await peerConnections.value[peerUuid].pc.createOffer({
+          offerToReceiveAudio: true,
+          offerToReceiveVideo: true,
+        })
+        await createdDescription(offer, peerUuid)
+      })
     }
   }
 
@@ -233,6 +292,7 @@ export const useConnectionsStore = defineStore('connections', () => {
       uuid: peerUuid,
       ssVideoStream: null,
       microphoneStream: null,
+      taskQueue: [],
       pc: new RTCPeerConnection(PEER_CONNECTION_CFG),
     }
 
@@ -241,23 +301,45 @@ export const useConnectionsStore = defineStore('connections', () => {
         return
       }
       console.log(peerConnections.value[peerUuid].trackMetadata)
-      if (peerConnections.value[peerUuid].trackMetadata == 'microphone') {
+      if (e.streams[0].getAudioTracks().length > 0) {
         peerConnections.value[peerUuid].microphoneStream = e.streams[0]
-      } else if (peerConnections.value[peerUuid].trackMetadata == 'screen-share') {
+      } /* (peerConnections.value[peerUuid].trackMetadata == 'screen-share') */ else {
         peerConnections.value[peerUuid].ssVideoStream = e.streams[0]
       }
     }
 
     peerConnection.pc.onnegotiationneeded = async (e) => {
-      const leaderId = [localUuid.value, peerUuid].sort()[0]
+      /*       try {
+        const leaderId = [localUuid.value, peerUuid].sort()[0]
 
-      const offer = await peerConnections.value[peerUuid].pc.createOffer({
-        offerToReceiveAudio: true,
-        offerToReceiveVideo: true,
+        const offer = await peerConnections.value[peerUuid].pc.createOffer({
+          offerToReceiveAudio: true,
+          offerToReceiveVideo: true,
+        })
+        if (leaderId == localUuid.value) {
+          await createdDescription(offer, peerUuid)
+        }
+      } catch (error) {
+        console.log(error)
+      } */
+
+      enqueueTask(peerUuid, async () => {
+        try {
+          const leaderId = [localUuid.value, peerUuid].sort()[0]
+          console.log(peerUuid, localUuid.value)
+          const offer = await peerConnections.value[peerUuid].pc.createOffer({
+            offerToReceiveAudio: true,
+            offerToReceiveVideo: true,
+          })
+          console.log(peerConnections.value[peerUuid].trackMetadata)
+          if (leaderId == localUuid.value) {
+            console.log('fdfhgfgj')
+            await createdDescription(offer, peerUuid)
+          }
+        } catch (error) {
+          console.log(error)
+        }
       })
-      if (leaderId == localUuid.value) {
-        await createdDescription(offer, peerUuid)
-      }
     }
 
     peerConnection.pc.onconnectionstatechange = (e) => {
@@ -271,12 +353,6 @@ export const useConnectionsStore = defineStore('connections', () => {
           }),
         )
 
-        /*         peerConnections.value[peerUuid].microphoneStream = new MediaStream([
-          peerConnections.value[peerUuid].pc.getTransceivers()[0].receiver.track,
-        ])
- */
-        /*  peerConnections.value[peerUuid].microphoneStream =  */
-
         roomWs.value!.send(
           JSON.stringify({
             uuid: localUuid.value,
@@ -288,18 +364,39 @@ export const useConnectionsStore = defineStore('connections', () => {
 
     peerConnection.pc.onicecandidate = (event) => gotIceCandidate(event, peerUuid)
 
+    peerConnections.value[peerUuid] = peerConnection
     if (initCall) {
-      peerConnection.pc
+      /*     peerConnection.pc
         .createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true })
         .then(async (description) => await createdDescription(description, peerUuid))
-        .catch((e) => console.log(e))
+        .catch((e) => console.log(e)) */
+      enqueueTask(peerUuid, async () =>
+        peerConnection.pc
+          .createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true })
+          .then(async (description) => await createdDescription(description, peerUuid))
+          .catch((e) => console.log(e)),
+      )
     }
-
-    peerConnections.value[peerUuid] = peerConnection
   }
 
   async function handleSdpSignal(signal: any, peerUuid: string) {
-    peerConnections.value[peerUuid].pc
+    /* enqueueTask() */
+
+    enqueueTask(peerUuid, async () => {
+      peerConnections.value[peerUuid].pc
+        .setRemoteDescription(new RTCSessionDescription(signal.sdp))
+        .then(() => {
+          if (signal.sdp.type === 'offer') {
+            peerConnections.value[peerUuid].pc
+              .createAnswer()
+              .then(async (description) => await createdDescription(description, peerUuid))
+              .catch((e) => console.log(e))
+          } else {
+            console.log(signal)
+          }
+        })
+    })
+    /*     peerConnections.value[peerUuid].pc
       .setRemoteDescription(new RTCSessionDescription(signal.sdp))
       .then(() => {
         if (signal.sdp.type === 'offer') {
@@ -310,14 +407,19 @@ export const useConnectionsStore = defineStore('connections', () => {
         } else {
           console.log(signal)
         }
-      })
+      }) */
   }
 
   function handleIceCandidate(signal: any, peerUuid: string): void {
     console.log(peerConnections.value[peerUuid].pc.signalingState)
-    peerConnections.value[peerUuid].pc
+    enqueueTask(peerUuid, async () => {
+      peerConnections.value[peerUuid].pc
+        .addIceCandidate(new RTCIceCandidate(signal.ice))
+        .catch((e) => console.log(e))
+    })
+    /*     peerConnections.value[peerUuid].pc
       .addIceCandidate(new RTCIceCandidate(signal.ice))
-      .catch((e) => console.log(e))
+      .catch((e) => console.log(e)) */
   }
 
   return {
@@ -327,7 +429,6 @@ export const useConnectionsStore = defineStore('connections', () => {
     localDisplayName,
     isMicrophoneOn,
     microphoneStream,
-    rtcConnectionQueue,
     getMediaTracks,
     handlePeerDisconnect,
     updateStream,

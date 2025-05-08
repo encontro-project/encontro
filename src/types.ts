@@ -4,6 +4,7 @@ export type PeerConnection = {
   uuid: string
   ssVideoStream: MediaStream | null
   microphoneStream: MediaStream | null
+  taskQueue: ((...args: any) => Promise<void>)[]
   trackMetadata?: 'microphone' | 'screen-share' | 'webcam'
   shareScreenStreamid?: string
   microphoneStreamId?: string
