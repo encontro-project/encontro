@@ -16,3 +16,8 @@ export type PeerConnection = {
 }
 
 //ss stand for share screen
+
+export type ChannelDescription = {
+  channelTitle: string
+  url: string
+}

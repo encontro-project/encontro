@@ -10,69 +10,20 @@ import { useRoomWsStore } from './wsConnection'
 
 // TODO (6) Добавить выбор устройств через менюшку
 
-// FIXME (6) при первой загрузке страницы не проигрываются все треки
-// с микрофонв пиров несмотря на то что audioStreamRef у компонента есть
-// Надо найти способ это задебажить
-
-const VIDEO_STREAM_WIDTH: number = 1920
-const VIDEO_STREAM_HEIGHT: number = 1080
-const VIDEO_STREAM_FRAME_RATE: number = 60
+// TODO (7) Перенести getUserMedia логику в roomWsStore
 
 const PEER_CONNECTION_CFG: RTCConfiguration = {
   iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }],
 }
 
-const CONSTRAINTS: MediaStreamConstraints = {
-  audio: true,
-  video: {
-    width: { ideal: VIDEO_STREAM_WIDTH, max: VIDEO_STREAM_WIDTH },
-    height: { ideal: VIDEO_STREAM_HEIGHT, max: VIDEO_STREAM_HEIGHT },
-    frameRate: { ideal: VIDEO_STREAM_FRAME_RATE, max: VIDEO_STREAM_FRAME_RATE },
-  },
-}
-
 export const useConnectionsStore = defineStore('connections', () => {
   const roomWsStore = useRoomWsStore()
 
-  const { roomWs, localUuid, localDisplayName } = storeToRefs(roomWsStore)
+  const { roomWs, localUuid, localDisplayName, microphoneStream, localStream } =
+    storeToRefs(roomWsStore)
 
   const peerConnections = ref<Record<string, PeerConnection>>({})
-  const localStream = ref<MediaStream | null>(null)
   const isMicrophoneOn = ref<boolean>(false)
-  const microphoneStream = ref<MediaStream | null>(null)
-
-  async function getMicrophoneTrack() {
-    microphoneStream.value = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        sampleRate: 48000,
-        noiseSuppression: true,
-        echoCancellation: true,
-      },
-      peerIdentity: localUuid.value,
-    })
-    microphoneStream.value.getAudioTracks()[0].contentHint = 'speech'
-  }
-
-  async function getMediaTracks() {
-    const devices = await navigator.mediaDevices.enumerateDevices()
-    console.log(
-      'Audio devices:',
-      devices.filter((d) => d.kind === 'audioinput'),
-    )
-    console.log(
-      'Video devices:',
-      devices.filter((d) => d.kind === 'videoinput'),
-    )
-
-    if (navigator.mediaDevices.getDisplayMedia) {
-      localStream.value = await navigator.mediaDevices.getDisplayMedia(CONSTRAINTS)
-    } else if (navigator.mediaDevices.getUserMedia) {
-      localStream.value = await navigator.mediaDevices.getUserMedia(CONSTRAINTS)
-    } else {
-      alert('Your browser does not support getDisplayMedia or getUserMedia API')
-      throw new Error('Unsupported media API')
-    }
-  }
 
   function handlePeerDisconnect(peerUuid: string) {
     console.log(`Peer ${peerUuid} disconnected`)
@@ -245,6 +196,7 @@ export const useConnectionsStore = defineStore('connections', () => {
             peerUuid
           ].pc.addTrack(track, microphoneStream.value as MediaStream)
         })
+        console.log(peerConnections.value[peerUuid].microphoneSender)
       }
     }
   }
@@ -258,6 +210,7 @@ export const useConnectionsStore = defineStore('connections', () => {
           dest: peerUuid,
         }),
       )
+
       localStream.value.getTracks().forEach((track) => {
         if (track.kind === 'video') {
           peerConnections.value[peerUuid].ssVideoSender = peerConnections.value[
@@ -424,12 +377,10 @@ export const useConnectionsStore = defineStore('connections', () => {
 
   return {
     peerConnections,
-    localStream,
     localUuid,
     localDisplayName,
     isMicrophoneOn,
     microphoneStream,
-    getMediaTracks,
     handlePeerDisconnect,
     updateStream,
     gotIceCandidate,
@@ -444,7 +395,6 @@ export const useConnectionsStore = defineStore('connections', () => {
     handleSdpSignal,
     handleIceCandidate,
     toggleMicrophone,
-    getMicrophoneTrack,
     shareMicrophone,
     setTrackMetadata,
   }
