@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import Home from './components/Home.vue'
 import ServerList from './components/ServerList/ServerList.vue'
 import SelectedMenu from './components/SelectedMenu.vue'
+
 import type { ChannelDescription } from './types'
+
 import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-
-const textChannels = <ChannelDescription[]>[]
 
 const route = useRoute()
 
@@ -14,11 +13,6 @@ const channelsRef = ref<{
   textChannels: ChannelDescription[]
   voiceChannels: ChannelDescription[]
 }>({ textChannels: [], voiceChannels: [] })
-
-const voiceChannels = [
-  { channelTitle: 'Первая комната', url: 'room1' },
-  { channelTitle: 'Вторая комната', url: 'room2' },
-]
 
 watch(route, async (newRoute, oldRoute) => {
   if (newRoute) {
@@ -43,7 +37,6 @@ watch(route, async (newRoute, oldRoute) => {
       :text-channels="channelsRef.textChannels"
     ></SelectedMenu>
     <router-view> </router-view>
-    <!--       <Home></Home> -->
   </div>
 </template>
 <style>

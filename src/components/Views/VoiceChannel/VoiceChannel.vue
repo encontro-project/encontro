@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useConnectionsStore } from '@/stores/rtcConnections'
 import { storeToRefs } from 'pinia'
-import { onUnmounted, ref, watch, watchEffect } from 'vue'
+import { onUnmounted, ref, watch } from 'vue'
 import User from './User.vue'
 import { useRoomWsStore } from '@/stores/wsConnection'
 import MicrophoneIcon from "../../Icons/MicrophoneIcon.vue"

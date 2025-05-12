@@ -6,7 +6,7 @@ const app = express()
 
 app.use(cors())
 
-app.get('/channelInfo/:channelId', (req, res) => {
+app.get('/channel-info/:channelId', (req, res) => {
   const channelId = req.params.channelId
 
   const mockData = [
@@ -26,6 +26,18 @@ app.get('/channelInfo/:channelId', (req, res) => {
     },
   ]
   res.send(mockData[channelId - 1])
+})
+
+app.post('/new-participant', (req, res) => {
+  try {
+    const body = req.body
+
+    channelParticipants[body.channelId][body.channelViewId][body.userUuid] = body
+
+    res.status(200).end()
+  } catch (error) {
+    res.status(400).end()
+  }
 })
 
 app.listen(PORT, () => {

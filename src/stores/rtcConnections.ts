@@ -117,21 +117,6 @@ export const useConnectionsStore = defineStore('connections', () => {
           console.log(e)
         })
     })
-
-    /*    peerConnections.value[peerUuid].pc
-      .setLocalDescription(description)
-      .then(() => {
-        roomWs.value!.send(
-          JSON.stringify({
-            sdp: peerConnections.value[peerUuid].pc.localDescription,
-            uuid: localUuid.value,
-            dest: peerUuid,
-          }),
-        )
-      })
-      .catch((e: Error) => {
-        console.log(e)
-      }) */
   }
 
   function toggleMicrophone() {
@@ -224,7 +209,6 @@ export const useConnectionsStore = defineStore('connections', () => {
         }
       })
 
-      //форсим негошиейшен типа я лидер пиздец а ты пидор ебаный ПДВЗАЗХВЛПХЩЗРВЩЛЗХАЗЩЛВПЗЩОШЛАЩЗЛХВПЗОЩШЩЗ
       enqueueTask(peerUuid, async () => {
         const offer = await peerConnections.value[peerUuid].pc.createOffer({
           offerToReceiveAudio: true,
@@ -256,26 +240,12 @@ export const useConnectionsStore = defineStore('connections', () => {
       console.log(peerConnections.value[peerUuid].trackMetadata)
       if (e.streams[0].getAudioTracks().length > 0) {
         peerConnections.value[peerUuid].microphoneStream = e.streams[0]
-      } /* (peerConnections.value[peerUuid].trackMetadata == 'screen-share') */ else {
+      } else {
         peerConnections.value[peerUuid].ssVideoStream = e.streams[0]
       }
     }
 
     peerConnection.pc.onnegotiationneeded = async (e) => {
-      /*       try {
-        const leaderId = [localUuid.value, peerUuid].sort()[0]
-
-        const offer = await peerConnections.value[peerUuid].pc.createOffer({
-          offerToReceiveAudio: true,
-          offerToReceiveVideo: true,
-        })
-        if (leaderId == localUuid.value) {
-          await createdDescription(offer, peerUuid)
-        }
-      } catch (error) {
-        console.log(error)
-      } */
-
       enqueueTask(peerUuid, async () => {
         try {
           const leaderId = [localUuid.value, peerUuid].sort()[0]
@@ -319,10 +289,6 @@ export const useConnectionsStore = defineStore('connections', () => {
 
     peerConnections.value[peerUuid] = peerConnection
     if (initCall) {
-      /*     peerConnection.pc
-        .createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true })
-        .then(async (description) => await createdDescription(description, peerUuid))
-        .catch((e) => console.log(e)) */
       enqueueTask(peerUuid, async () =>
         peerConnection.pc
           .createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true })
@@ -333,8 +299,6 @@ export const useConnectionsStore = defineStore('connections', () => {
   }
 
   async function handleSdpSignal(signal: any, peerUuid: string) {
-    /* enqueueTask() */
-
     enqueueTask(peerUuid, async () => {
       peerConnections.value[peerUuid].pc
         .setRemoteDescription(new RTCSessionDescription(signal.sdp))
@@ -349,18 +313,6 @@ export const useConnectionsStore = defineStore('connections', () => {
           }
         })
     })
-    /*     peerConnections.value[peerUuid].pc
-      .setRemoteDescription(new RTCSessionDescription(signal.sdp))
-      .then(() => {
-        if (signal.sdp.type === 'offer') {
-          peerConnections.value[peerUuid].pc
-            .createAnswer()
-            .then(async (description) => await createdDescription(description, peerUuid))
-            .catch((e) => console.log(e))
-        } else {
-          console.log(signal)
-        }
-      }) */
   }
 
   function handleIceCandidate(signal: any, peerUuid: string): void {
@@ -370,9 +322,6 @@ export const useConnectionsStore = defineStore('connections', () => {
         .addIceCandidate(new RTCIceCandidate(signal.ice))
         .catch((e) => console.log(e))
     })
-    /*     peerConnections.value[peerUuid].pc
-      .addIceCandidate(new RTCIceCandidate(signal.ice))
-      .catch((e) => console.log(e)) */
   }
 
   return {
