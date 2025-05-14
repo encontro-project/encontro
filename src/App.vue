@@ -10,15 +10,16 @@ import { useRoute } from 'vue-router'
 const route = useRoute()
 
 const channelsRef = ref<{
-  textChannels: ChannelDescription[]
+  chats: ChannelDescription[]
   voiceChannels: ChannelDescription[]
-}>({ textChannels: [], voiceChannels: [] })
+}>({ chats: [], voiceChannels: [] })
 
 watch(route, async (newRoute, oldRoute) => {
-  if (newRoute) {
-    console.log(newRoute.params.channelId)
+  if (newRoute.matched[0].name == 'channel') {
+    //проверяем, нужный ли path для изменения данных в selectedMenuItem
+    console.log(newRoute)
     const data = (await fetch(
-      `http://localhost:3000/channelInfo/${newRoute.params.channelId}`,
+      `http://localhost:3000/channel-info/${newRoute.params.channelId}`,
     )) as any
     channelsRef.value = await data.json()
     console.log(channelsRef.value)
@@ -34,7 +35,7 @@ watch(route, async (newRoute, oldRoute) => {
     <ServerList></ServerList>
     <SelectedMenu
       :voice-channels="channelsRef?.voiceChannels"
-      :text-channels="channelsRef.textChannels"
+      :chats="channelsRef.chats"
     ></SelectedMenu>
     <router-view> </router-view>
   </div>

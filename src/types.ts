@@ -21,3 +21,13 @@ export type ChannelDescription = {
   channelTitle: string
   url: string
 }
+
+export type ChatInfo = {
+  title: string
+  messages: ChatMessage[]
+}
+type ChatMessage = {
+  text: string
+  timestamp: number
+  sender: number
+}

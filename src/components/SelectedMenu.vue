@@ -6,7 +6,7 @@ import { useRouter, useRoute } from 'vue-router'
 
 interface Props {
   voiceChannels: ChannelDescription[]
-  textChannels: ChannelDescription[]
+  chats: ChannelDescription[]
 }
 defineProps<Props>()
 
@@ -94,8 +94,8 @@ const handleConnectionStart = async (room: string) => {
         <div class="menu-options-list">
           <router-link
             class="menu-options-list-item"
-            v-for="i in textChannels"
-            :to="`/channels/${route.params.channelId}/${i.url}`"
+            v-for="i in chats"
+            :to="`/channels/${route.params.channelId}/chat/${i.url}`"
           >
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
@@ -127,7 +127,7 @@ const handleConnectionStart = async (room: string) => {
                 ? handleConnectionStart(i.url)
                 : (() => {
                     console.log('dfffsd')
-                    router.push(`/channels/${route.params.channelId}/${i.url}`)
+                    router.push(`/channels/${route.params.channelId}/voice-channel/${i.url}`)
                   })()
             "
           >

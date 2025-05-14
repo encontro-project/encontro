@@ -38,13 +38,13 @@ const {roomWs, isWsConnected, localUuid, localDisplayName, localStream} = storeT
 const {  peerConnections, isMicrophoneOn } = storeToRefs(rtcConnectionsStore)
 
 onUnmounted(() => {
-  roomWs.value?.send(
+ /*  roomWs.value?.send(
     JSON.stringify({
       type: 'peer-disconnect',
       uuid: localUuid.value,
     }),
   )
-  closeRoomWsConnection()
+  closeRoomWsConnection() */
   
 })
 
