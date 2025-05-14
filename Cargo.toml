@@ -17,3 +17,4 @@ tokio = { version = "1.35", features = ["sync"] }
 
 rustls = { version = "0.21", default-features = false }
 rcgen = { version = "0.13.2", default-features = false, features = ["ring", "crypto"] }
+rustls-pemfile = { version = "1.0", default-features = false }

@@ -4,7 +4,6 @@ use std::sync::atomic::{Ordering, AtomicUsize};
 
 use tokio::sync::Mutex;
 use actix_files::Files;
-use rcgen::CertifiedKey;
 use actix_web_actors::ws;
 use rustls::ServerConfig;
 use actix::{Actor, Handler, Message, Recipient, ActorContext, AsyncContext, StreamHandler};
@@ -121,20 +120,55 @@ async fn ws_route(rq: HttpRequest, stream: Payload, room: Path::<String>, rooms:
     ws::start(actor, &rq, stream)
 }
 
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
-    let CertifiedKey { cert, key_pair } = rcgen::generate_simple_self_signed(vec![
-        "127.0.0.1".to_owned(), "localhost".to_owned()
-    ]).unwrap();
+fn get_signaling_cfg() -> ServerConfig {
+    use {
+        actix_web::web::Buf,
+        std::{path::Path, io::BufReader},
+        rustls_pemfile::{certs, pkcs8_private_keys}
+    };
 
-    let key = rustls::PrivateKey(key_pair.serialize_der());
-    let cert_chain = rustls::Certificate(cert.der().to_vec());
+    if !Path::new("./certs/localhost+2-key.pem").exists() || !Path::new("./certs/localhost+2.pem").exists() {
+        panic!("run `bash ./gen_crt.sh first")
+    }
 
-    let cfg = ServerConfig::builder()
+    let key_file = &mut BufReader::new(include_bytes!("./certs/localhost+2-key.pem").reader());
+    let cert_file = &mut BufReader::new(include_bytes!("./certs/localhost+2.pem").reader());
+
+    let cert_chain = certs(cert_file)
+        .unwrap()
+        .into_iter()
+        .map(rustls::Certificate)
+        .collect();
+
+    let mut keys = pkcs8_private_keys(key_file)
+        .unwrap()
+        .into_iter()
+        .map(rustls::PrivateKey)
+        .collect::<Vec::<rustls::PrivateKey>>();
+
+    if keys.is_empty() {
+        let key_file = &mut BufReader::new(include_bytes!("./certs/localhost+2-key.pem").reader());
+        keys = rustls_pemfile::rsa_private_keys(key_file)
+            .unwrap()
+            .into_iter()
+            .map(rustls::PrivateKey)
+            .collect()
+    }
+
+    if keys.is_empty() {
+        panic!("no valid private key found")
+    }
+
+    ServerConfig::builder()
         .with_safe_defaults()
         .with_no_client_auth()
-        .with_single_cert(vec![cert_chain], key)
-        .expect("failed to create server config");
+        .with_single_cert(cert_chain, keys.remove(0))
+        .expect("failed to create server config")
+}
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    let cfg = get_signaling_cfg();
 
     let rooms = Arc::new(Mutex::new(Rooms::new()));
 
