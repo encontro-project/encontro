@@ -2,7 +2,8 @@
 
 diesel::table! {
     messages (id) {
-        id -> Int4,
+        id -> Int8,
         content -> Text,
+        timestamp -> Timestamptz,
     }
 }

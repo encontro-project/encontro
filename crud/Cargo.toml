@@ -14,6 +14,7 @@ tokio = { version = "1.35", features = ["sync"] }
 rustls = { version = "0.21", default-features = false }
 rcgen = { version = "0.13.2", default-features = false, features = ["ring", "crypto"] }
 rustls-pemfile = { version = "1.0", default-features = false }
-diesel = { version = "2.2.10", features = ["r2d2", "postgres_backend", "postgres"] }
+diesel = { version = "2.2.10", features = ["r2d2", "postgres_backend", "postgres", "chrono"] }
 dotenvy = "0.15.7"
 serde = { version = "1.0.219", features = ["derive"] }
+chrono = { version = "0.4", features = ["serde"] }

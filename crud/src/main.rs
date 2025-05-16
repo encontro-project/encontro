@@ -75,14 +75,15 @@ impl Handler<Broadcast> for WsUser {
 }
 
 // REST: Add a message
-async fn add_message(data: web::Data<AppState>, msg: web::Json<NewMessage>) -> HttpResponse {
+async fn add_message(data: web::Data<AppState>, new_msg: web::Json<NewMessage>) -> HttpResponse {
     let mut conn = data.pool.get().expect("Couldn't get DB connection");
 
-    let new_msg = diesel::insert_into(dsl::messages)
-        .values(&msg.into_inner())
-        .get_result::<Message>(&mut conn);
+    let result = diesel::insert_into(dsl::messages)
+        .values(new_msg.into_inner())
+        .returning(Message::as_select())
+        .get_result(&mut conn);
 
-    match new_msg {
+    match result {
         Ok(_) => HttpResponse::Created().body("Message added"),
         Err(_) => HttpResponse::InternalServerError().body("Failed to insert"),
     }
@@ -92,7 +93,7 @@ async fn add_message(data: web::Data<AppState>, msg: web::Json<NewMessage>) -> H
 async fn delete_message(data: web::Data<AppState>, id: web::Path<usize>) -> HttpResponse {
     let mut conn = data.pool.get().expect("Couldn't get DB connection");
 
-    match diesel::delete(dsl::messages.filter(dsl::id.eq(*id as i32))).execute(&mut conn) {
+    match diesel::delete(dsl::messages.filter(dsl::id.eq(*id as i64))).execute(&mut conn) {
         Ok(1) => HttpResponse::Ok().body("Deleted"),
         Ok(_) => HttpResponse::NotFound().body("Message not found"),
         Err(_) => HttpResponse::InternalServerError().body("DB error"),
