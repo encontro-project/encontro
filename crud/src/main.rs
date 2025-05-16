@@ -59,6 +59,17 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsUser {
 
             self.app_data.messages.lock().unwrap().push(text.to_string());
 
+            let mut conn = self.app_data.pool.get().expect("Couldn't get DB connection");
+
+            let new_msg = NewMessage {
+                content: text.to_string(),
+            };
+
+            _ = diesel::insert_into(dsl::messages)
+                .values(new_msg)
+                .returning(Message::as_select())
+                .get_result(&mut conn);
+
             for user in recipients {
                 let _ = user.do_send(Broadcast(text.to_string()));
             }
