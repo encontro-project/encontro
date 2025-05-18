@@ -43,19 +43,19 @@ func handleWs(c *gin.Context) {
 	}
 
 	id := int(atomic.AddUint64(&nextID, 1))
-	ws := &WsConn{id, room, conn}
+	ws := WsConn{id, room, conn}
 
 	// register client
 	roomsMu.Lock()
 	if _, ok := rooms[room]; !ok {
 		rooms[room] = make(map[int]*WsConn)
 	}
-	rooms[room][id] = ws
+	rooms[room][id] = &ws
 	roomsMu.Unlock()
 
 	log.Printf("client %d joined room %s\n", id, room)
 
-	go handleWsConnection(ws)
+	go handleWsConnection(&ws)
 }
 
 func handleWsConnection(ws *WsConn) {
