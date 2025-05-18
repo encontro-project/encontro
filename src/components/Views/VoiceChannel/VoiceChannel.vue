@@ -13,18 +13,11 @@ const roomWsConnectionStore = useRoomWsStore()
 
 
 const {
-  setupPeer,
-  handlePeerDisconnect,
-  handleIceCandidate,
-  handleSdpSignal,
   updateStream,
   shareScreen,
   stopStream,
-  unsubscribeFromStream,
   leaveCall,
   toggleMicrophone,
-  shareMicrophone,
-  setTrackMetadata,
 } = rtcConnectionsStore
 
 
@@ -37,78 +30,12 @@ const {roomWs, isWsConnected, localUuid, localDisplayName, localStream} = storeT
 
 const {  peerConnections, isMicrophoneOn } = storeToRefs(rtcConnectionsStore)
 
-onUnmounted(() => {
- /*  roomWs.value?.send(
-    JSON.stringify({
-      type: 'peer-disconnect',
-      uuid: localUuid.value,
-    }),
-  )
-  closeRoomWsConnection() */
-  
-})
 
 
-const gotMessageFromServer = async (message: MessageEvent) => {
-    const signal = JSON.parse(message.data)
-    const peerUuid = signal.uuid
-
-
-    if (!roomWs.value) {
-      return
-    }
-
-    /* console.log(signal, peerConnections.value, peerUuid) */
-    if (signal.type === 'peer-disconnect') {
-      handlePeerDisconnect(peerUuid)
-        
-      return
-    }
-    if (signal.type == 'get-tracks' && peerUuid != localUuid.value) {
-      if (!peerConnections.value[peerUuid].ssVideoSender) {
-        shareScreen(peerUuid)
-      }
-    }
-    if (signal.type == "get-microphone" && peerUuid != localUuid.value) {
-      if (!peerConnections.value[peerUuid].microphoneStream) {
-        shareMicrophone(peerUuid)
-      }
-    } 
-    if (signal.type == 'stop-stream' && peerUuid != localUuid.value) {
-      if (peerConnections.value[peerUuid].ssVideoStream) {
-        unsubscribeFromStream(peerUuid)
-      }
-    }
-    if (peerUuid === localUuid.value || (signal.dest !== localUuid.value && signal.dest !== 'all'))
-    return
-  
-  if (signal.metadata) {
-    setTrackMetadata(peerUuid, signal.metadata)
-  }
-  if (signal.displayName && signal.dest === 'all') {
-    
-    setupPeer(peerUuid, signal.displayName, false)
-    roomWs.value?.send(
-      JSON.stringify({
-        displayName: localDisplayName.value,
-        uuid: localUuid.value,
-        dest: peerUuid,
-      }),
-    )
-  } else if (signal.displayName && signal.dest === localUuid.value) {
-    setupPeer(peerUuid, signal.displayName, true)
-  } else if (signal.sdp) {
-    console.log("dest: ", signal.dest, "uuid: ", peerUuid)
-    await handleSdpSignal(signal, peerUuid)
-  } else if (signal.ice) {
-    handleIceCandidate(signal, peerUuid)
-  }
-}
 
 
 
 const getTracks = async () => {
-  const WS_PORT = 8443
   await getMediaTracks()
   if (localVideo.value) {
     localVideo.value.srcObject = localStream.value
@@ -154,33 +81,7 @@ const handleLeaveCall = () => {
   }
 }
 
-watch(
-  roomWs,
-  (newSocket, oldSocket) => {
-    if (oldSocket) {
-      leaveCall()
-      oldSocket.send(
-      JSON.stringify({
-        type: 'peer-disconnect',
-        uuid: localUuid.value,
-      }),
-    )
-    setTimeout(() => {
 
-      oldSocket.close()
-    }, 100)
-    
-    console.log('cleanup')
-    }
-    if (newSocket) {
-      newSocket.onmessage = (e) => {
-        gotMessageFromServer(e)
-      }
-      console.log(newSocket)
-    }
-  },
-  { deep: false },
-)
 </script>
 
 <template>

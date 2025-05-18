@@ -5,12 +5,16 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon index.js"
+    "start": "nodemon index.js",
+    "crud": "nodemon crud.js --env-file=.env"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "body-parser": "^2.2.0",
     "cors": "^2.8.5",
-    "nodemon": "^3.1.10"
+    "dotenv": "^16.5.0",
+    "nodemon": "^3.1.10",
+    "pg": "^8.16.0"
   }
 }

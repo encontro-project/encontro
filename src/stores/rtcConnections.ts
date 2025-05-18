@@ -12,6 +12,8 @@ import { useRoomWsStore } from './wsConnection'
 
 // TODO (7) Перенести getUserMedia логику в roomWsStore
 
+// TODO Перенести логику прикручивания слушателей из VideoChannel
+
 const PEER_CONNECTION_CFG: RTCConfiguration = {
   iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }],
 }
