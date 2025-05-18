@@ -12,7 +12,8 @@ import { useRoomWsStore } from './wsConnection'
 
 // TODO (7) Перенести getUserMedia логику в roomWsStore
 
-// TODO Перенести логику прикручивания слушателей из VideoChannel
+// BUGFIX если переприсоединяется не лидер, offer не шлется другому пиру
+// TODO переделать логику leader в onnegotiationneeded
 
 const PEER_CONNECTION_CFG: RTCConfiguration = {
   iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }],
@@ -258,7 +259,6 @@ export const useConnectionsStore = defineStore('connections', () => {
           })
           console.log(peerConnections.value[peerUuid].trackMetadata)
           if (leaderId == localUuid.value) {
-            console.log('fdfhgfgj')
             await createdDescription(offer, peerUuid)
           }
         } catch (error) {
