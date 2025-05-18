@@ -1,0 +1,63 @@
+package main
+
+import (
+	"log"
+	"os"
+	"path/filepath"
+
+	"encontro/internal/delivery/websocket"
+	"encontro/internal/domain/service"
+	inmemRepo "encontro/internal/infrastructure/repository"
+	"encontro/internal/infrastructure/server"
+	"encontro/internal/usecase"
+)
+
+func main() {
+	// Получаем конфигурацию из переменных окружения
+	port := os.Getenv("SIGNALING_PORT")
+	if port == "" {
+		port = "8443" // порт по умолчанию для signaling
+	}
+	certPath := os.Getenv("CERT_PATH")
+	if certPath == "" {
+		certPath = "certs" // путь по умолчанию
+	}
+
+	// Инициализация репозитория и use case для комнат
+	repoConfig := inmemRepo.NewInMemoryConfig(false)
+	roomRepo := inmemRepo.NewInMemoryRoomRepository(repoConfig)
+	uuidGen := service.NewGoogleUUIDGenerator()
+	roomUseCase := usecase.NewRoomUseCase(roomRepo, uuidGen)
+
+	// Инициализация WebSocket обработчика
+	wsHandler := websocket.NewHandler(roomUseCase)
+
+	// Настройка конфигурации сервера
+	config := server.DefaultConfig()
+	config.AllowMethods = []string{"GET", "OPTIONS"} // Только GET для WebSocket
+
+	// Настройка маршрутизатора
+	router := server.NewRouter(config)
+
+	// API группа
+	api := router.Group("/api")
+	{
+		// WebSocket endpoint
+		api.GET("/ws/:room", wsHandler.HandleWebSocket)
+	}
+
+	// Обработка статики
+	router.Static("/", "./static")
+
+	// Пути к сертификатам
+	certFile := filepath.Join(certPath, "localhost+2.pem")
+	keyFile := filepath.Join(certPath, "localhost+2-key.pem")
+
+	log.Printf("Starting Signaling server at https://localhost:%s", port)
+	log.Printf("Using certificates: %s, %s", certFile, keyFile)
+
+	// Запуск сервера с TLS
+	if err := router.RunTLS(":"+port, certFile, keyFile); err != nil {
+		log.Fatalf("Failed to start Signaling server: %v", err)
+	}
+}
