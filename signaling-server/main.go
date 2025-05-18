@@ -28,7 +28,7 @@ type WsConn struct {
 var (
 	nextID   uint64
 	rooms    = make(map[string]map[int]*WsConn)
-	mu       sync.Mutex
+	roomsMu  sync.Mutex
 	upgrader = websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool { return true },
 	}
@@ -46,12 +46,12 @@ func handleWs(c *gin.Context) {
 	ws := &WsConn{id, room, conn}
 
 	// register client
-	mu.Lock()
+	roomsMu.Lock()
 	if _, ok := rooms[room]; !ok {
 		rooms[room] = make(map[int]*WsConn)
 	}
 	rooms[room][id] = ws
-	mu.Unlock()
+	roomsMu.Unlock()
 
 	log.Printf("client %d joined room %s\n", id, room)
 
@@ -69,22 +69,22 @@ func handleWsConnection(ws *WsConn) {
 		broadcast(ws.room, ws.id, string(msg))
 	}
 
-	mu.Lock()
+	roomsMu.Lock()
 	if roomMap, ok := rooms[ws.room]; ok {
 		delete(roomMap, ws.id)
 		if len(roomMap) == 0 {
 			delete(rooms, ws.room)
 		}
 	}
-	mu.Unlock()
+	roomsMu.Unlock()
 
 	ws.conn.Close()
 	log.Printf("Client %d left room %s\n", ws.id, ws.room)
 }
 
 func broadcast(room string, fromID int, msg string) {
-	mu.Lock()
-	defer mu.Unlock()
+	roomsMu.Lock()
+	defer roomsMu.Unlock()
 
 	conns, ok := rooms[room]
 
