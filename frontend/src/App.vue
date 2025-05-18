@@ -11,7 +11,7 @@ import { useConnectionsStore } from '@/stores/rtcConnections'
 
 import { useRoomWsStore } from '@/stores/wsConnection'
 
-import { ref, watch } from 'vue'
+import { onBeforeMount, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
@@ -109,10 +109,26 @@ const gotMessageFromServer = async (message: MessageEvent) => {
   }
 }
 
+onUnmounted(() => {
+  roomWs.value!.send(
+    JSON.stringify({
+      uuid: localUuid.value,
+      type: 'peer-disconnect',
+    }),
+  )
+})
+
 watch(
   roomWs,
   (newSocket, oldSocket) => {
     if (oldSocket) {
+      oldSocket.send(
+        JSON.stringify({
+          type: 'peer-disconnect',
+          uuid: localUuid.value,
+        }),
+      )
+
       leaveCall()
       oldSocket.close()
       console.log('cleanup')

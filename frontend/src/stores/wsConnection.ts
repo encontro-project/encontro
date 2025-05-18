@@ -1,6 +1,5 @@
-import { defineStore, storeToRefs } from 'pinia'
+import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { useConnectionsStore } from './rtcConnections'
 import { v4 as uuidv4 } from 'uuid'
 
 const VIDEO_STREAM_WIDTH: number = 1920

@@ -143,6 +143,13 @@ export const useConnectionsStore = defineStore('connections', () => {
   function leaveCall() {
     stopStream()
     Object.values(peerConnections.value).forEach((peerConnection) => {
+      peerConnection.pc.ontrack = null
+      peerConnection.pc.onicecandidate = null
+      peerConnection.pc.oniceconnectionstatechange = null
+      peerConnection.pc.onsignalingstatechange = null
+      peerConnection.pc.onnegotiationneeded = null
+      peerConnection.pc.onicegatheringstatechange = null
+      peerConnection.pc.onconnectionstatechange = null
       peerConnection.pc.close()
     })
     peerConnections.value = {}
