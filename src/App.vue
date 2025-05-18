@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import ServerList from './components/ServerList/ServerList.vue'
 import SelectedMenu from './components/SelectedMenu.vue'
+import PeersVoiceTracks from './components/PeersVoiceTracks/PeersVoiceTracks.vue'
 
 import type { ChannelDescription } from './types'
 
@@ -30,6 +31,8 @@ const {
   shareMicrophone,
   setTrackMetadata,
 } = rtcConnectionsStore
+
+const { closeRoomWsConnection } = roomWsConnectionStore
 
 const { roomWs, localUuid, localDisplayName } = storeToRefs(roomWsConnectionStore)
 
@@ -111,16 +114,7 @@ watch(
   (newSocket, oldSocket) => {
     if (oldSocket) {
       leaveCall()
-      oldSocket.send(
-        JSON.stringify({
-          type: 'peer-disconnect',
-          uuid: localUuid.value,
-        }),
-      )
-      setTimeout(() => {
-        oldSocket.close()
-      }, 100)
-
+      oldSocket.close()
       console.log('cleanup')
     }
     if (newSocket) {
@@ -139,6 +133,7 @@ watch(
     <div class="logo">encontro</div>
   </header>
   <div class="main-container">
+    <PeersVoiceTracks></PeersVoiceTracks>
     <ServerList></ServerList>
     <SelectedMenu
       :voice-channels="channelsRef?.voiceChannels"
