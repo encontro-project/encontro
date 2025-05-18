@@ -5,6 +5,12 @@
 > ## Start the Frontend
 
 ```bash
+
+$ cd frontend
+
+first ensure that you installed all dependencies, if not
+$ npm i
+if you have all dependencies installed, then proceed with
 $ npm run dev
 ```
 
