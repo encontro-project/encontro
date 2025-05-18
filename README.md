@@ -18,7 +18,7 @@ $ npm run start
 > ## Start the Signaling Server
 
 ```bash
-$ cd signaling-server
+$ cd signalingServer
 $ go run main.go
 ```
 
