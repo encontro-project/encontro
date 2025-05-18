@@ -1,5 +1,0 @@
-TAGS
-Cargo.lock
-target
-migrations/*
-.env
