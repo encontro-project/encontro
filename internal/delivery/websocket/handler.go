@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 
 	"encontro/internal/domain/entity"
+	wsinfra "encontro/internal/infrastructure/websocket"
 	"encontro/internal/usecase"
 )
 
@@ -32,13 +32,14 @@ type Message struct {
 
 // Handler обрабатывает WebSocket соединения
 type Handler struct {
+	hub         *wsinfra.Hub
 	roomUseCase *usecase.RoomUseCase
-	mu          sync.RWMutex
 }
 
 // NewHandler создает новый экземпляр Handler
 func NewHandler(roomUseCase *usecase.RoomUseCase) *Handler {
 	return &Handler{
+		hub:         wsinfra.NewHub(),
 		roomUseCase: roomUseCase,
 	}
 }
@@ -72,8 +73,12 @@ func (h *Handler) HandleWebSocket(c *gin.Context) {
 	}
 	defer h.roomUseCase.RemoveClientFromRoom(c.Request.Context(), roomID, client.ID)
 
+	h.hub.Register(client.ID, conn)
+	defer h.hub.Unregister(client.ID)
+
 	// Канал для получения сообщений от клиента
 	messageChan := make(chan Message)
+
 	// Канал для сигнала завершения
 	done := make(chan struct{})
 
@@ -116,7 +121,7 @@ func (h *Handler) handleMessage(ctx context.Context, conn *websocket.Conn, clien
 		// Обработка присоединения к комнате
 		room, err := h.roomUseCase.GetRoom(ctx, client.RoomID)
 		if err != nil {
-			return fmt.Errorf("failed to get room: %w", err)
+			return fmt.Errorf("Failed to get room: %w", err)
 		}
 
 		// Отправляем информацию о других клиентах в комнате
@@ -130,27 +135,35 @@ func (h *Handler) handleMessage(ctx context.Context, conn *websocket.Conn, clien
 		}
 
 		if err := conn.WriteJSON(response); err != nil {
-			return fmt.Errorf("failed to send room state: %w", err)
+			return fmt.Errorf("Failed to send room state: %w", err)
 		}
 
 	case "offer", "answer", "ice-candidate":
 		// Пересылаем сигнальные сообщения другим клиентам
 		room, err := h.roomUseCase.GetRoom(ctx, client.RoomID)
 		if err != nil {
-			return fmt.Errorf("failed to get room: %w", err)
+			return fmt.Errorf("Failed to get room: %w", err)
+		}
+
+		data, err := json.Marshal(msg)
+		if err != nil {
+			return fmt.Errorf("Failed to marshal message: %w", err)
 		}
 
 		// Отправляем сообщение всем клиентам в комнате, кроме отправителя
 		for _, c := range room.GetClients() {
-			if c.ID != client.ID {
-				// TODO(#2): Реализовать отправлениe сигнального сообщения конкретному клиенту
-				//   Необходимо организовать хранение активных WebSocket-соединений,
-				//   чтобы можно было находить нужное соединение по ID клиента и пересылать ему сообщение
+			if c.ID == client.ID {
+				continue
+			}
+
+			if err := h.hub.SendTo(c.ID, websocket.TextMessage, data); err != nil {
+				log.Printf("SendTo %s error: %v", c.ID, err)
+				h.hub.Unregister(c.ID)
 			}
 		}
 
 	default:
-		return fmt.Errorf("unknown message type: %s", msg.Type)
+		return fmt.Errorf("Unknown message type: %s", msg.Type)
 	}
 
 	return nil
