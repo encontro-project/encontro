@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	httphandler "encontro/internal/delivery/http"
+	middleware "encontro/internal/delivery/http/middleware"
 	repoiface "encontro/internal/domain/repository"
 	"encontro/internal/domain/service"
 	"encontro/internal/infrastructure/database"
@@ -30,8 +31,10 @@ func main() {
 	// Определяем режим работы
 	useInMemory := os.Getenv("USE_INMEMORY") == "1"
 	initTestData := os.Getenv("INIT_TEST_DATA") == "1"
+
 	var roomRepo repoiface.RoomRepository
 	var messageRepo repoiface.MessageRepository
+	var userSummaryRepo repoiface.UserSummaryRepository
 
 	if useInMemory {
 		// Режим разработки: in-memory хранилище без БД
@@ -44,6 +47,7 @@ func main() {
 		inMemoryCfg := repository.NewInMemoryConfig(initTestData)
 		roomRepo = repository.NewInMemoryRoomRepository(inMemoryCfg)
 		messageRepo = repository.NewInMemoryMessageRepository(inMemoryCfg)
+		userSummaryRepo = repository.NewInMemoryUserSummaryRepository(inMemoryCfg)
 	} else {
 		// Режим production: PostgreSQL
 		log.Println("[INFO] Запуск в режиме production: PostgreSQL")
@@ -66,6 +70,7 @@ func main() {
 
 		roomRepo = repository.NewPostgresRoomRepository(dbPool)
 		messageRepo = repository.NewPostgresMessageRepository(dbPool)
+		userSummaryRepo = repository.NewPostgresUserSummaryRepository(dbPool.GetPool())
 	}
 
 	// Инициализация UUID генератора
@@ -74,10 +79,12 @@ func main() {
 	// Инициализация use cases
 	roomUseCase := usecase.NewRoomUseCase(roomRepo, uuidGen)
 	messageUseCase := usecase.NewMessageUseCase(messageRepo, uuidGen)
+	userSummaryUseCase := usecase.NewUserSummaryUseCase(userSummaryRepo)
 
 	// Инициализация обработчиков
 	roomHandler := httphandler.NewRoomHandler(roomUseCase)
 	messageHandler := httphandler.NewMessageHandler(messageUseCase)
+	userSummaryHandler := httphandler.NewUserSummaryHandler(userSummaryUseCase)
 
 	// Настройка маршрутизатора с конфигурацией по умолчанию
 	router := server.NewRouter(nil)
@@ -93,6 +100,8 @@ func main() {
 	router.GET("/rooms/:id/messages", messageHandler.GetMessages)
 	router.GET("/rooms/:id/messages/:messageId", messageHandler.GetMessage)
 	router.DELETE("/rooms/:id/messages/:messageId", messageHandler.DeleteMessage)
+
+	router.GET("/api/user/:id", middleware.UserIDMiddleware(), userSummaryHandler.GetUserSummary)
 
 	// Канал для получения сигналов завершения
 	sigChan := make(chan os.Signal, 1)

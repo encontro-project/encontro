@@ -2,10 +2,29 @@ package middleware
 
 import (
 	"fmt"
+	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
 )
+
+const ContextUserIDKey = "userID"
+
+// UserIDMiddleware: парсит :id и вставляет его в контекст
+func UserIDMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		idParam := c.Param("id")
+		userID, err := strconv.ParseInt(idParam, 10, 64)
+		if err != nil || userID <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+			c.Abort()
+			return
+		}
+		c.Set(ContextUserIDKey, userID)
+		c.Next()
+	}
+}
 
 // CORS middleware для обработки CORS-запросов
 func CORS() gin.HandlerFunc {
