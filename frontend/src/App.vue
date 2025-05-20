@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import ServerList from './components/ServerList/ServerList.vue'
 import SelectedMenu from './components/SelectedMenu.vue'
-import PeersVoiceTracks from './components/PeersVoiceTracks/PeersVoiceTracks.vue'
-
-import type { ChannelDescription } from './types'
+import PeersVoiceTracks from './global/PeersVoiceTracks/PeersVoiceTracks.vue'
 
 import { storeToRefs } from 'pinia'
 
@@ -11,12 +9,14 @@ import { useConnectionsStore } from '@/stores/rtcConnections'
 
 import { useRoomWsStore } from '@/stores/wsConnection'
 
-import { onBeforeMount, onUnmounted, ref, watch } from 'vue'
+import { onBeforeMount, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
-const route = useRoute()
+import { useUserDataStore } from './stores/userData'
 
 const rtcConnectionsStore = useConnectionsStore()
+
+const userDataStore = useUserDataStore()
 
 const roomWsConnectionStore = useRoomWsStore()
 
@@ -32,28 +32,13 @@ const {
   setTrackMetadata,
 } = rtcConnectionsStore
 
-const { closeRoomWsConnection } = roomWsConnectionStore
+const { fetchUserData } = userDataStore
+
+const { isLoading, userData } = storeToRefs(userDataStore)
 
 const { roomWs, localUuid, localDisplayName } = storeToRefs(roomWsConnectionStore)
 
 const { peerConnections } = storeToRefs(rtcConnectionsStore)
-
-const channelsRef = ref<{
-  chats: ChannelDescription[]
-  voiceChannels: ChannelDescription[]
-}>({ chats: [], voiceChannels: [] })
-
-watch(route, async (newRoute, oldRoute) => {
-  if (newRoute.matched[0].name == 'channel') {
-    //проверяем, нужный ли path для изменения данных в selectedMenuItem
-    console.log(newRoute)
-    const data = (await fetch(
-      `http://localhost:3000/channel-info/${newRoute.params.channelId}`,
-    )) as any
-    channelsRef.value = await data.json()
-    console.log(channelsRef.value)
-  }
-})
 
 const gotMessageFromServer = async (message: MessageEvent) => {
   const signal = JSON.parse(message.data)
@@ -63,33 +48,35 @@ const gotMessageFromServer = async (message: MessageEvent) => {
     return
   }
 
-  /* console.log(signal, peerConnections.value, peerUuid) */
+  //Убираем пир из peerConnections на его сообщение о дисконнекте
   if (signal.type === 'peer-disconnect') {
     handlePeerDisconnect(peerUuid)
 
     return
   }
+  //Присылаем пиру tracks из демки на его сообщение
   if (signal.type == 'get-tracks' && peerUuid != localUuid.value) {
     if (!peerConnections.value[peerUuid].ssVideoSender) {
       shareScreen(peerUuid)
     }
   }
+  //Присылаем пиру track микрофона на его сообщение
   if (signal.type == 'get-microphone' && peerUuid != localUuid.value) {
     if (!peerConnections.value[peerUuid].microphoneStream) {
       shareMicrophone(peerUuid)
     }
   }
+  //Прекращаем стрим пира на его сообщение
   if (signal.type == 'stop-stream' && peerUuid != localUuid.value) {
     if (peerConnections.value[peerUuid].ssVideoStream) {
       unsubscribeFromStream(peerUuid)
     }
   }
+  //Ретурним, чтобы не вмешиваться в логику webRTCNegotiation
   if (peerUuid === localUuid.value || (signal.dest !== localUuid.value && signal.dest !== 'all'))
     return
 
-  if (signal.metadata) {
-    setTrackMetadata(peerUuid, signal.metadata)
-  }
+  //Бродкастим сигнал чтобы подключиться ко всем пирам
   if (signal.displayName && signal.dest === 'all') {
     setupPeer(peerUuid, signal.displayName, false)
     roomWs.value?.send(
@@ -100,14 +87,21 @@ const gotMessageFromServer = async (message: MessageEvent) => {
       }),
     )
   } else if (signal.displayName && signal.dest === localUuid.value) {
+    //Создаем оффер на пришедший сигнал
     setupPeer(peerUuid, signal.displayName, true)
   } else if (signal.sdp) {
+    //Обмениваемся sdp описаниями
     console.log('dest: ', signal.dest, 'uuid: ', peerUuid)
     await handleSdpSignal(signal, peerUuid)
   } else if (signal.ice) {
+    //Добавляем ICE кандидатов
     handleIceCandidate(signal, peerUuid)
   }
 }
+
+onMounted(async () => {
+  await fetchUserData()
+})
 
 onUnmounted(() => {
   roomWs.value!.send(
@@ -145,23 +139,34 @@ watch(
 </script>
 
 <template>
-  <header>
-    <div class="logo">encontro</div>
-  </header>
-  <div class="main-container">
-    <PeersVoiceTracks></PeersVoiceTracks>
-    <ServerList></ServerList>
-    <SelectedMenu
-      :voice-channels="channelsRef?.voiceChannels"
-      :chats="channelsRef.chats"
-    ></SelectedMenu>
-    <router-view> </router-view>
+  <!-- <div class="loading-screen" v-if="isLoading">E</div> -->
+  <div>
+    <header>
+      <div class="logo">encontro</div>
+    </header>
+    <div class="main-container">
+      <PeersVoiceTracks></PeersVoiceTracks>
+      <ServerList></ServerList>
+      <SelectedMenu></SelectedMenu>
+      <router-view> </router-view>
+    </div>
   </div>
 </template>
 <style>
 @font-face {
   font-family: Roboto, system-ui;
   src: url('../public/Roboto-VariableFont_wdth/wght.ttf');
+}
+
+.loading-screen {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 128px;
+  background-color: black;
+  color: white;
 }
 header {
   position: fixed;
@@ -182,7 +187,8 @@ header {
   margin-top: 40px;
   width: 100vw;
   min-height: 100vh;
-  background-color: #2a2a2a;
+  background-color: black;
+  position: relative;
 }
 .logo {
   text-align: center;
@@ -191,7 +197,7 @@ header {
   margin-bottom: 7px;
 }
 body {
-  overflow-x: hidden;
+  overflow: hidden;
   margin: 0 auto;
   font-family: Roboto, system-ui;
 }

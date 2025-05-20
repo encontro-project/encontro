@@ -1,52 +1,66 @@
-const PORT = 3000
-const express = require('express')
-const cors = require('cors')
+const PORT = 3000;
+const express = require("express");
+const cors = require("cors");
 
-const app = express()
+const app = express();
 
-app.use(cors())
+app.use(cors());
 
 const mockServers = {
   1: {
-    serverName: 'Для педиков',
-    chats: [{ channelTitle: 'Гомики пишут', url: 1 }],
+    serverName: "Для педиков",
+    chats: [{ channelTitle: "Гомики пишут", url: 1 }],
     voiceChannels: [
-      { channelTitle: 'Первая комната', url: 'room1' },
-      { channelTitle: 'Вторая комната', url: 'room2' },
+      { channelTitle: "Первая комната", url: "room1" },
+      { channelTitle: "Вторая комната", url: "room2" },
     ],
   },
   2: {
-    serverName: 'Для гомиков',
-    chats: [{ channelTitle: 'Педики', url: 2 }],
+    serverName: "Для гомиков",
+    chats: [{ channelTitle: "Педики", url: 2 }],
     voiceChannels: [
-      { channelTitle: 'Большой хуй', url: 'room3' },
-      { channelTitle: 'Вторая хуесссссссссс', url: 'room4' },
+      { channelTitle: "Большой хуй", url: "room3" },
+      { channelTitle: "Вторая хуесссссссссс", url: "room4" },
     ],
   },
-}
+};
 
 const mockChats = {
   1: {
-    title: 'Гомики пишут',
+    title: "Гомики пишут",
     messages: [
-      { text: 'Я гей', timestamp: 100, sender: 1337 },
-      { text: 'Я тоже', timestamp: 200, sender: 1488 },
+      { text: "Я гей", timestamp: 100, sender: 1337 },
+      { text: "Я тоже", timestamp: 200, sender: 1488 },
+      { text: "Я гей", timestamp: 100, sender: 1337 },
+      { text: "Я тоже", timestamp: 200, sender: 1488 },
+      { text: "Я гей", timestamp: 100, sender: 1337 },
+      { text: "Я тоже", timestamp: 200, sender: 1488 },
+      { text: "Я гей", timestamp: 100, sender: 1337 },
+      { text: "Я тоже", timestamp: 200, sender: 1488 },
+      { text: "Я гей", timestamp: 100, sender: 1337 },
+      { text: "Я тоже", timestamp: 200, sender: 1488 },
+      { text: "Я гей", timestamp: 100, sender: 1337 },
+      { text: "Я тоже", timestamp: 200, sender: 1488 },
     ],
   },
   2: {
-    title: 'Педики',
+    title: "Педики",
     messages: [
-      { text: 'Я гей', timestamp: 100, sender: 1337 },
-      { text: 'а я нет пошел нахуй пидор ебаный блядь', timestamp: 200, sender: 1488 },
+      { text: "Я гей", timestamp: 100, sender: 1337 },
+      {
+        text: "а я нет пошел нахуй пидор ебаный блядь",
+        timestamp: 200,
+        sender: 1488,
+      },
     ],
   },
-}
+};
 
-app.get('/channel-info/:channelId', (req, res) => {
-  const channelId = req.params.channelId
+app.get("/channel-info/:channelId", (req, res) => {
+  const channelId = req.params.channelId;
 
-  res.send(mockServers[channelId])
-})
+  res.send(mockServers[channelId]);
+});
 
 /* app.post('/new-participant', (req, res) => {
   try {
@@ -60,12 +74,12 @@ app.get('/channel-info/:channelId', (req, res) => {
   }
 }) */
 
-app.get('/chat-info/:chatId', (req, res) => {
-  const chatId = req.params.chatId
+app.get("/chat-info/:chatId", (req, res) => {
+  const chatId = req.params.chatId;
 
-  res.send(mockChats[chatId])
-})
+  res.send(mockChats[chatId]);
+});
 
 app.listen(PORT, () => {
-  console.log(PORT)
-})
+  console.log(PORT);
+});

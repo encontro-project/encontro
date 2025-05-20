@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import { onMounted } from 'vue'
+
 interface Props {
   serverTitle: string
   serverUrl: string

@@ -1,14 +1,9 @@
 <script lang="ts" setup>
-import type { ChannelDescription } from '@/types'
+import httpClient from '@/httpClient/httpClient'
 import { useRoomWsStore } from '@/stores/wsConnection'
 import { storeToRefs } from 'pinia'
+import { watch, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-
-interface Props {
-  voiceChannels: ChannelDescription[]
-  chats: ChannelDescription[]
-}
-defineProps<Props>()
 
 const roomWsConnectionStore = useRoomWsStore()
 
@@ -20,10 +15,20 @@ const { initWebSocket, getMicrophoneTrack } = roomWsConnectionStore
 
 const { currentRoomUrl } = storeToRefs(roomWsConnectionStore)
 
+const menuData = ref<any>({ title: '', chats: [], voiceChannels: [] })
+
 const handleConnectionStart = async (room: string) => {
   initWebSocket(room)
   await getMicrophoneTrack()
 }
+
+// Меняем данные в меню при изменении рута на рут с парамсом channelId
+watch(route, async () => {
+  if (route.params.channelId) {
+    const response = await fetch(`http://localhost:3000/channel-info/${route.params.channelId}`)
+    menuData.value = await response.json()
+  }
+})
 </script>
 
 <template>
@@ -94,7 +99,7 @@ const handleConnectionStart = async (room: string) => {
         <div class="menu-options-list">
           <router-link
             class="menu-options-list-item"
-            v-for="i in chats"
+            v-for="i in menuData.chats"
             :to="`/channels/${route.params.channelId}/chat/${i.url}`"
           >
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -118,7 +123,7 @@ const handleConnectionStart = async (room: string) => {
         <div class="menu-options-list">
           <div
             class="menu-options-list-item"
-            v-for="i in voiceChannels"
+            v-for="i in menuData.voiceChannels"
             :class="
               currentRoomUrl == i.url ? 'menu-options-list-item-active' : 'menu-options-list-item'
             "
@@ -180,12 +185,12 @@ const handleConnectionStart = async (room: string) => {
   display: flex;
   gap: 5px;
   font-size: 19px;
-  color: white;
+  color: black;
   align-items: center;
   height: 36px;
   margin-top: 10px;
   margin-bottom: 10px;
-  background-color: #6c6c6c;
+  background-color: white;
   border-radius: 5px;
 }
 
@@ -194,7 +199,7 @@ const handleConnectionStart = async (room: string) => {
 }
 .menu-controls-item-active svg {
   margin-left: 8px;
-  stroke: white;
+  stroke: black;
   width: 28px;
   height: 28px;
 }
@@ -217,7 +222,7 @@ a {
   display: flex;
   gap: 5px;
   font-size: 19px;
-  color: #dfdfdf;
+  color: white;
   align-items: center;
   height: 36px;
   margin-top: 10px;
@@ -228,7 +233,7 @@ a {
 }
 .menu-controls-item svg {
   margin-left: 8px;
-  stroke: #dfdfdf;
+  stroke: white;
   width: 28px;
   height: 28px;
 }
@@ -275,18 +280,23 @@ a {
   border-radius: 5px;
   cursor: pointer;
   font-size: 19px;
+  transition: background-color 0.2s;
 }
 
 .menu-options-list-item {
-  background-color: #2a2a2a;
+  background-color: black;
 }
 
+.menu-options-list-item-active svg g path {
+  fill: black;
+}
 .menu-options-list-item:hover {
-  background-color: #3d3d3d;
+  background-color: #919191;
 }
 
 .menu-options-list-item-active {
-  background-color: #6c6c6c !important;
+  color: black;
+  background-color: white !important;
 }
 
 .list-item-username {

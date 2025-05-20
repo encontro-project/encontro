@@ -30,11 +30,6 @@ const {roomWs, isWsConnected, localUuid, localDisplayName, localStream} = storeT
 
 const {  peerConnections, isMicrophoneOn } = storeToRefs(rtcConnectionsStore)
 
-
-
-
-
-
 const getTracks = async () => {
   await getMediaTracks()
   if (localVideo.value) {
@@ -120,14 +115,17 @@ const handleLeaveCall = () => {
 <style>
 .videos-container {
   display: grid;
-  max-width: 100vw;
+  max-width: 95%;
   grid-template-columns: repeat(3, 600px);
   gap: 20px;
   
 }
 
 .users-container {
-  display: block;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  
 }
 
 .user-container {
@@ -140,18 +138,20 @@ const handleLeaveCall = () => {
   height: 400px;
 }
 .video-template {
-  background-color: aqua;
+  background-color: white;
   width: 600px;
   height: 400px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  border-radius:  5px;
 }
 .user-pic {
   width: 100px;
   height: 100px;
   border-radius: 50%;
+  border: 3px solid black;
 }
 .rtc-stream {
   width: 600px;

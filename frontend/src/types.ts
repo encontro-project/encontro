@@ -17,9 +17,38 @@ export type PeerConnection = {
 
 //ss stand for share screen
 
-export type ChannelDescription = {
-  channelTitle: string
-  url: string
+export {}
+
+export type Server = {
+  title: string
+  voice_channels: VoiceChannel[]
+  text_chats: TextChat[]
+  accociated_users: MessageUser[]
+}
+
+type VoiceChannel = {
+  id: number
+  title: string
+}
+
+type TextChat = {
+  id: number
+  title: string
+  messages: Message[]
+}
+
+type Message = {
+  id: string
+  content: string
+  sender_id: string
+  created_at: string
+  updated_at: string
+}
+
+type MessageUser = {
+  id: number
+  username: string
+  avatar_url: string
 }
 
 export type ChatInfo = {
