@@ -47,7 +47,9 @@ func main() {
 	}
 
 	// Обработка статики
-	router.Static("/", "./static")
+
+	// Крашит с: panic: catch-all wildcard '*filepath' in new path '/*filepath' conflicts with existing path segment 'api' in existing prefix '/api'
+	// router.Static("/", "./static")
 
 	// Пути к сертификатам
 	certFile := filepath.Join(certPath, "localhost+2.pem")
