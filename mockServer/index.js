@@ -29,18 +29,66 @@ const mockChats = {
   1: {
     title: "Гомики пишут",
     messages: [
-      { text: "Я гей", timestamp: 100, sender: 1337 },
-      { text: "Я тоже", timestamp: 200, sender: 1488 },
-      { text: "Я гей", timestamp: 100, sender: 1337 },
-      { text: "Я тоже", timestamp: 200, sender: 1488 },
-      { text: "Я гей", timestamp: 100, sender: 1337 },
-      { text: "Я тоже", timestamp: 200, sender: 1488 },
-      { text: "Я гей", timestamp: 100, sender: 1337 },
-      { text: "Я тоже", timestamp: 200, sender: 1488 },
-      { text: "Я гей", timestamp: 100, sender: 1337 },
-      { text: "Я тоже", timestamp: 200, sender: 1488 },
-      { text: "Я гей", timestamp: 100, sender: 1337 },
-      { text: "Я тоже", timestamp: 200, sender: 1488 },
+      {
+        text: "Я гей",
+        timestamp: "2025-05-21T13:21:44.4933535+03:00",
+        sender: 1337,
+      },
+      {
+        text: "Я тоже",
+        timestamp: "2024-05-21T13:21:44.4933535+03:00",
+        sender: 1488,
+      },
+      {
+        text: "Я гей",
+        timestamp: "2025-05-21T13:21:44.4933535+03:00",
+        sender: 1337,
+      },
+      {
+        text: "Я тоже",
+        timestamp: "2024-05-21T13:21:44.4933535+03:00",
+        sender: 1488,
+      },
+      {
+        text: "Я гей",
+        timestamp: "2025-05-21T13:21:44.4933535+03:00",
+        sender: 1337,
+      },
+      {
+        text: "Я тоже",
+        timestamp: "2024-05-21T13:21:44.4933535+03:00",
+        sender: 1488,
+      },
+      {
+        text: "Я гей",
+        timestamp: "2025-05-21T13:21:44.4933535+03:00",
+        sender: 1337,
+      },
+      {
+        text: "Я тоже",
+        timestamp: "2024-05-21T13:21:44.4933535+03:00",
+        sender: 1488,
+      },
+      {
+        text: "Я гей",
+        timestamp: "2025-05-21T13:21:44.4933535+03:00",
+        sender: 1337,
+      },
+      {
+        text: "Я тоже",
+        timestamp: "2024-05-21T13:21:44.4933535+03:00",
+        sender: 1488,
+      },
+      {
+        text: "Я гей",
+        timestamp: "2025-05-21T13:21:44.4933535+03:00",
+        sender: 1337,
+      },
+      {
+        text: "Я тоже",
+        timestamp: "2024-02-21T13:21:44.4933535+03:00",
+        sender: 1488,
+      },
     ],
   },
   2: {

@@ -1,13 +1,18 @@
 <script lang="ts" setup>
 import httpClient from '@/httpClient/httpClient'
-import type { ChatInfo } from '@/types'
+import type { ChatInfo, MessagesByDate } from '@/types'
 import MessageInput from '@/components/shared/MessageInput.vue'
 import { onBeforeMount, onMounted, ref, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
+import { getFormatedDate } from '@/helpers/getFormatedDate'
+import { groupByDate } from '@/helpers/groupByDate'
+import { getFormatedTime } from '@/helpers/getFormatedTime'
 
 const route = useRoute()
 
 const serverInfoRef = ref<ChatInfo>({ title: '', messages: [] })
+
+const groupedMessages = ref<MessagesByDate>({})
 
 const messagesRef = ref<HTMLDivElement>()
 onBeforeMount(async () => {
@@ -35,6 +40,7 @@ function scrollToBottom() {
 watch(
   serverInfoRef,
   async () => {
+    groupedMessages.value = groupByDate(serverInfoRef.value.messages)
     scrollToBottom()
   },
   { deep: true },
@@ -65,20 +71,37 @@ onMounted(() => {})
       </div>
       <div class="chat-messages">
         <div
-          class="chat-message"
-          v-for="message in serverInfoRef.messages.sort((a, b) => {
-            return a.timestamp - b.timestamp
+          class="date-messages"
+          v-for="dateGroup in Object.values(groupedMessages).sort((a, b) => {
+            return a.dateKey > b.dateKey ? -1 : 1
           })"
         >
-          <img
-            src="https://e7.pngegg.com/pngimages/719/959/png-clipart-celebes-crested-macaque-monkey-selfie-grapher-people-for-the-ethical-treatment-of-animals-funny-mammal-animals-thumbnail.png"
-            alt=""
-          />
-          <div class="message-container">
-            <p class="message-timestamp">{{ new Date(message.timestamp) }}</p>
-            <p>
-              {{ message.text }}
-            </p>
+          <div class="messages-date">
+            <div class="date-border"></div>
+            <p>{{ dateGroup.dateKey }}</p>
+            <div class="date-border"></div>
+          </div>
+          <div
+            class="chat-message"
+            v-for="message in dateGroup.messages.sort((a, b) => {
+              return a.timestamp < b.timestamp ? -1 : 1
+            })"
+          >
+            <img
+              src="https://e7.pngegg.com/pngimages/719/959/png-clipart-celebes-crested-macaque-monkey-selfie-grapher-people-for-the-ethical-treatment-of-animals-funny-mammal-animals-thumbnail.png"
+              alt=""
+            />
+            <div class="message-container">
+              <div class="message-header">
+                <p class="message-username">Обезьянка</p>
+                <p class="message-timestamp">
+                  {{ getFormatedTime(message.timestamp) }}
+                </p>
+              </div>
+              <p>
+                {{ message.text }}
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -146,10 +169,10 @@ onMounted(() => {})
   margin-top: 20px;
   white-space: pre-wrap;
   display: flex;
-  gap: 10px;
+  gap: 15px;
   color: white;
+
   font-size: 20px;
-  border-bottom: 1px rgba(255, 255, 255, 0.3) solid;
 }
 
 .chat-message img {
@@ -159,7 +182,49 @@ onMounted(() => {})
 }
 
 .message-timestamp {
-  margin-top: 0;
   color: #6c6c6c;
+}
+
+.messages-date {
+  color: white;
+  font-size: 16px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 10px;
+  text-align: center;
+}
+.messages-date p {
+  display: inline-block;
+  white-space: nowrap;
+  flex: 0 0 auto;
+  margin-top: 0;
+  margin-bottom: 2px;
+}
+.date-border {
+  flex: 1;
+  background-color: white;
+  height: 1px;
+  width: calc(50% - 40px);
+}
+
+.message-container {
+  /*   display: flex;
+  flex-direction: column;
+  gap: 10px;
+ */
+}
+
+.message-header {
+  display: flex;
+  gap: 10px;
+}
+.message-header p {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+.message-container p {
+  margin-top: 10px;
 }
 </style>

@@ -53,12 +53,14 @@ type ServerUser = {
   avatar_url: string
 }
 
+export type MessagesByDate = Record<string, { dateKey: string; messages: ChatMessage[] }>
+
 export type ChatInfo = {
   title: string
   messages: ChatMessage[]
 }
-type ChatMessage = {
+export type ChatMessage = {
   text: string
-  timestamp: number
+  timestamp: string
   sender: string
 }

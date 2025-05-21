@@ -10,16 +10,13 @@ const props = defineProps<Props>()
 
 const inputRef = ref<HTMLTextAreaElement>()
 
-onMounted(() => {
-  inputRef.value!.value = ''
-})
+const inputValue = ref<string>('')
 
 // TODO ебануть логику запросов
 
-async function postMessage() {
-  if (inputRef.value) {
-    const now = new Date()
-    console.log(inputRef.value?.value)
+async function submitMessage() {
+  if (inputValue.value && inputValue.value.trim()) {
+    console.log(inputValue.value)
     /* const response = await httpClient.post(props.postUrl)
     console.log(response) */
     resetInput()
@@ -37,15 +34,16 @@ function adjustHeight(action: 'add-line' | 'remove-line') {
 }
 
 function resetInput() {
-  inputRef.value!.value = ''
-  inputRef.value!.rows = 1
+  inputValue.value = ''
+  inputRef.value!.style.height = '24px'
 }
 
 async function handleEnterPress(e: KeyboardEvent) {
   if (e.shiftKey) {
     adjustHeight('add-line')
   } else {
-    await postMessage()
+    e.preventDefault()
+    await submitMessage()
   }
 }
 
@@ -70,6 +68,7 @@ function handleBackspacePress() {
         ref="inputRef"
         @keypress.enter="handleEnterPress"
         @keydown.delete="handleBackspacePress"
+        v-model="inputValue"
       >
       </textarea>
     </div>
