@@ -13,78 +13,36 @@ const roomWsConnectionStore = useRoomWsStore()
 
 
 const {
-  updateStream,
-  shareScreen,
-  stopStream,
-  leaveCall,
   toggleMicrophone,
 } = rtcConnectionsStore
 
 
-
-const {closeRoomWsConnection, getMediaTracks} = roomWsConnectionStore
-
 const localVideo = ref<null | HTMLVideoElement>(null)
 
-const {roomWs, isWsConnected, localUuid, localDisplayName, localStream} = storeToRefs(roomWsConnectionStore)
+const {isWsConnected, localDisplayName, localStream} = storeToRefs(roomWsConnectionStore)
 
 const {  peerConnections, isMicrophoneOn } = storeToRefs(rtcConnectionsStore)
 
-const getTracks = async () => {
-  await getMediaTracks()
-  if (localVideo.value) {
-    localVideo.value.srcObject = localStream.value
+
+
+
+
+
+
+
+watch([localStream, localVideo], ([newStream, newVideo], [oldStream, oldVideo]) => {
+  if (newStream) {
+    if (newVideo) {
+    newVideo.srcObject = localStream.value
   }
-  console.log(localStream)
-}
-
-const handleStreamChange = async () => {
-  await getTracks()
-  updateStream()
-}
-
-
-
-const handleStreamStart = async () => {
-  await getTracks()
-  Object.values(peerConnections.value).forEach((peerConnection) => {
-    shareScreen(peerConnection.uuid)
-  })
-}
-
-const handleStreamStop = () => {
-  stopStream()
-  roomWs.value?.send(
-    JSON.stringify({
-      uuid: localUuid.value,
-      type: 'stop-stream',
-      }),
-      )
-  
-}
-
-const handleLeaveCall = () => {
-  if (roomWs.value){
-    roomWs.value.send(
-      JSON.stringify({
-        type: 'peer-disconnect',
-        uuid: localUuid.value,
-      }),
-    )
-    leaveCall()
-    closeRoomWsConnection()
   }
-}
+})
 
 
 </script>
 
 <template>
 <div class="users-container">
-  <button @click="handleStreamChange">stream change</button>
-  <button @click="handleStreamStart">share screen</button>
-  <button @click="handleStreamStop">stop stream</button>
-  <button @click="handleLeaveCall">Quit Call</button>
   <div class="videos-container">
     <div class="user-container" v-if="isWsConnected">
       <div class="video-container" v-if="localStream">
@@ -114,9 +72,11 @@ const handleLeaveCall = () => {
 
 <style>
 .videos-container {
+  position: relative;
+  margin-top: 20px;
   display: grid;
-  max-width: 95%;
-  grid-template-columns: repeat(3, 600px);
+  max-width: 80%;
+  grid-template-columns: repeat(2, 600px);
   gap: 20px;
   
 }
@@ -176,11 +136,6 @@ const handleLeaveCall = () => {
 }
 .display-name {
   font-size: 18px;
-}
-@media (max-width: 1859px) {
-  .videos-container {
-    grid-template-columns: repeat(2, 600px);
-  }
 }
 @media (max-width: 1239px) {
   .videos-container{

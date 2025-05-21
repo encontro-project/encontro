@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import ServerList from './components/ServerList/ServerList.vue'
 import SelectedMenu from './components/SelectedMenu.vue'
-import PeersVoiceTracks from './global/PeersVoiceTracks/PeersVoiceTracks.vue'
+import PeersVoiceTracks from './components/global/PeersVoiceTracks/PeersVoiceTracks.vue'
 
 import { storeToRefs } from 'pinia'
 
@@ -13,6 +13,7 @@ import { onBeforeMount, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
 import { useUserDataStore } from './stores/userData'
+import VoiceChatMenu from './components/global/VoiceChatMenu/VoiceChatMenu.vue'
 
 const rtcConnectionsStore = useConnectionsStore()
 
@@ -148,6 +149,7 @@ watch(
       <PeersVoiceTracks></PeersVoiceTracks>
       <ServerList></ServerList>
       <SelectedMenu></SelectedMenu>
+      <VoiceChatMenu></VoiceChatMenu>
       <router-view> </router-view>
     </div>
   </div>

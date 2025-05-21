@@ -94,10 +94,10 @@ const mockChats = {
   2: {
     title: "Педики",
     messages: [
-      { text: "Я гей", timestamp: 100, sender: 1337 },
+      { text: "Я гей", timestamp: 1488, sender: 1337 },
       {
         text: "а я нет пошел нахуй пидор ебаный блядь",
-        timestamp: 200,
+        timestamp: 1488,
         sender: 1488,
       },
     ],
