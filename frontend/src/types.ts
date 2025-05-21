@@ -23,7 +23,7 @@ export type Server = {
   title: string
   voice_channels: VoiceChannel[]
   text_chats: TextChat[]
-  accociated_users: MessageUser[]
+  accociated_users: ServerUser[]
 }
 
 type VoiceChannel = {
@@ -47,7 +47,7 @@ type Message = {
   updated_at: string
 }
 
-type MessageUser = {
+type ServerUser = {
   id: number
   username: string
   avatar_url: string
@@ -60,5 +60,5 @@ export type ChatInfo = {
 type ChatMessage = {
   text: string
   timestamp: number
-  sender: number
+  sender: string
 }
