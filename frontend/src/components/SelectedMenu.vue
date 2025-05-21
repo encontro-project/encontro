@@ -13,12 +13,12 @@ const router = useRouter()
 
 const { initWebSocket, getMicrophoneTrack } = roomWsConnectionStore
 
-const { currentRoomUrl } = storeToRefs(roomWsConnectionStore)
+const { currentRoom } = storeToRefs(roomWsConnectionStore)
 
 const menuData = ref<any>({ title: '', chats: [], voiceChannels: [] })
 
-const handleConnectionStart = async (room: string) => {
-  initWebSocket(room)
+const handleConnectionStart = async (room: string, roomTitle: string, serverId: string) => {
+  initWebSocket(room, roomTitle, serverId)
   await getMicrophoneTrack()
 }
 
@@ -125,11 +125,13 @@ watch(route, async () => {
             class="menu-options-list-item"
             v-for="i in menuData.voiceChannels"
             :class="
-              currentRoomUrl == i.url ? 'menu-options-list-item-active' : 'menu-options-list-item'
+              currentRoom.roomId == i.url
+                ? 'menu-options-list-item-active'
+                : 'menu-options-list-item'
             "
             @click="
-              currentRoomUrl != i.url
-                ? handleConnectionStart(i.url)
+              currentRoom.roomId != i.url
+                ? handleConnectionStart(i.url, i.channelTitle, route.params.channelId as string)
                 : (() => {
                     console.log('dfffsd')
                     router.push(`/channels/${route.params.channelId}/voice-channel/${i.url}`)

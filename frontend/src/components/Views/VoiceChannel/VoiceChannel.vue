@@ -44,12 +44,12 @@ watch([localStream, localVideo], ([newStream, newVideo], [oldStream, oldVideo]) 
 <template>
 <div class="users-container">
   <div class="videos-container">
-    <div class="user-container" v-if="isWsConnected">
+    <div class="user-container" v-if="isWsConnected == 'connected'">
       <div class="video-container" v-if="localStream">
         <video ref="localVideo" autoplay muted class="rtc-stream"></video>
       </div>
       <div  class="video-template" v-else>
-        <img class="user-pic" src="https://e7.pngegg.com/pngimages/719/959/png-clipart-celebes-crested-macaque-monkey-selfie-grapher-people-for-the-ethical-treatment-of-animals-funny-mammal-animals-thumbnail.png"></img>
+        <img class="user-pic" src="https://masterpiecer-images.s3.yandex.net/5fcb1cda5223d2d:upscaled"></img>
       </div>
       <div class="user-info">
         <div class="microphone-status">

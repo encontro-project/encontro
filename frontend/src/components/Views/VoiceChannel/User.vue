@@ -30,7 +30,7 @@ watch([videoRef, videoStreamRef], ([newVideo, newStream], [oldVideo, oldStream])
       <video ref="videoRef" autoplay class="rtc-stream"></video>
     </div>
     <div v-else class="video-template">
-      <img class="user-pic" src="https://e7.pngegg.com/pngimages/719/959/png-clipart-celebes-crested-macaque-monkey-selfie-grapher-people-for-the-ethical-treatment-of-animals-funny-mammal-animals-thumbnail.png"></img>
+      <img class="user-pic" src="https://masterpiecer-images.s3.yandex.net/5fcb1cda5223d2d:upscaled"></img>
     </div>
     <div class="user-info">
       <div class="microphone-status">

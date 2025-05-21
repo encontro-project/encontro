@@ -87,10 +87,7 @@ onMounted(() => {})
               return a.timestamp < b.timestamp ? -1 : 1
             })"
           >
-            <img
-              src="https://e7.pngegg.com/pngimages/719/959/png-clipart-celebes-crested-macaque-monkey-selfie-grapher-people-for-the-ethical-treatment-of-animals-funny-mammal-animals-thumbnail.png"
-              alt=""
-            />
+            <img src="https://masterpiecer-images.s3.yandex.net/5fcb1cda5223d2d:upscaled" alt="" />
             <div class="message-container">
               <div class="message-header">
                 <p class="message-username">Обезьянка</p>
@@ -118,10 +115,18 @@ onMounted(() => {})
   min-height: calc(100vh - 130px);
   max-height: calc(100vh - 130px);
 }
+
+::-webkit-scrollbar {
+  width: 6px;
+  background-color: black;
+}
+::-webkit-scrollbar-thumb {
+  background-color: white;
+  width: 10px;
+  border-radius: 5px;
+}
 .chat-wrapper {
-  max-height: calc(100vh - 40px);
   width: 100%;
-  height: calc(100vh - 40px);
   position: relative;
 }
 .chat-header {

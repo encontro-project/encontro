@@ -123,7 +123,6 @@ watch(
           uuid: localUuid.value,
         }),
       )
-
       leaveCall()
       oldSocket.close()
       console.log('cleanup')

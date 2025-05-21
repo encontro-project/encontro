@@ -23,9 +23,14 @@ const generateUUID = () => {
 
 export const useRoomWsStore = defineStore('roomWsStore', () => {
   const microphoneStream = ref<MediaStream | null>(null)
-  const isWsConnected = ref<boolean>(false)
+  const isWsConnected = ref<'disconnected' | 'connecting' | 'connected'>('disconnected')
   const roomWs = ref<WebSocket | null>(null)
-  const currentRoomUrl = ref<string>('')
+  const currentRoom = ref<{
+    roomId: string
+    roomTitle: string
+    serverId: string
+    serverTitle: string
+  }>({ roomId: '', roomTitle: '', serverId: '', serverTitle: '' })
   const localStream = ref<MediaStream | null>(null)
   const localUuid = ref<string>(
     localStorage.getItem('uuid')
@@ -40,15 +45,19 @@ export const useRoomWsStore = defineStore('roomWsStore', () => {
   )
 
   async function getMicrophoneTrack() {
-    microphoneStream.value = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        sampleRate: 48000,
-        noiseSuppression: true,
-        echoCancellation: true,
-      },
-      peerIdentity: localUuid.value,
-    })
-    microphoneStream.value.getAudioTracks()[0].contentHint = 'speech'
+    try {
+      microphoneStream.value = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          sampleRate: 48000,
+          noiseSuppression: true,
+          echoCancellation: true,
+        },
+        peerIdentity: localUuid.value,
+      })
+      microphoneStream.value.getAudioTracks()[0].contentHint = 'speech'
+    } catch (error) {
+      console.log('dfshggdhd')
+    }
   }
 
   async function getMediaTracks() {
@@ -72,11 +81,13 @@ export const useRoomWsStore = defineStore('roomWsStore', () => {
     }
   }
 
-  const initWebSocket = async (room: string) => {
+  const initWebSocket = async (roomId: string, roomTitle: string, serverId: string) => {
     await getMicrophoneTrack()
-
-    currentRoomUrl.value = room
-    roomWs.value = new WebSocket(`wss://localhost:8443/ws/${room}`)
+    isWsConnected.value = 'connecting'
+    currentRoom.value.roomId = roomId
+    currentRoom.value.roomTitle = roomTitle
+    currentRoom.value.serverId = serverId
+    roomWs.value = new WebSocket(`wss://localhost:8443/ws/${roomId}`)
 
     roomWs.value.onopen = () => {
       roomWs.value!.send(
@@ -87,17 +98,16 @@ export const useRoomWsStore = defineStore('roomWsStore', () => {
         }),
       )
 
-      isWsConnected.value = true
+      isWsConnected.value = 'connected'
     }
 
-    roomWs.value.onclose = () => {
-      isWsConnected.value = false
-    }
+    roomWs.value.onclose = () => {}
   }
 
   const closeRoomWsConnection = () => {
     roomWs.value?.close()
-    roomWs.value = null
+    currentRoom.value = { roomId: '', roomTitle: '', serverId: '', serverTitle: '' }
+    isWsConnected.value = 'disconnected'
   }
   return {
     roomWs,
@@ -106,7 +116,7 @@ export const useRoomWsStore = defineStore('roomWsStore', () => {
     localDisplayName,
     microphoneStream,
     localStream,
-    currentRoomUrl,
+    currentRoom,
     getMicrophoneTrack,
     initWebSocket,
     closeRoomWsConnection,

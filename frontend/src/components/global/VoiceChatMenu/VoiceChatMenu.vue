@@ -11,8 +11,7 @@ const roomWsConnectionStore = useRoomWsStore()
 const { getMediaTracks, closeRoomWsConnection } = roomWsConnectionStore
 
 const { leaveCall, updateStream, shareScreen, stopStream } = rtcConnectionsStore
-
-const { roomWs, localUuid, isWsConnected } = storeToRefs(roomWsConnectionStore)
+const { roomWs, localUuid, isWsConnected, currentRoom } = storeToRefs(roomWsConnectionStore)
 const { peerConnections } = storeToRefs(rtcConnectionsStore)
 
 const getTracks = async () => {
@@ -49,17 +48,29 @@ const handleLeaveCall = () => {
         uuid: localUuid.value,
       }),
     )
-    leaveCall()
     closeRoomWsConnection()
+    leaveCall()
   }
 }
 </script>
 
 <template>
-  <div class="voice-chat-menu-wrapper" v-if="isWsConnected">
+  <div class="voice-chat-menu-wrapper" v-if="isWsConnected != 'disconnected'">
     <div class="voice-chat-menu-container">
       <div class="row1">
-        <div class="button-container">
+        <div>
+          <p
+            :class="`connection-state${isWsConnected == 'connecting' ? '-connecting' : '-connected'}`"
+          >
+            {{ isWsConnected == 'connecting' ? 'Connecting...' : 'Voice Connected' }}
+          </p>
+          <router-link
+            :to="`/channels/${currentRoom.serverId}/voice-channel/${currentRoom.roomId}`"
+            class="current-room-title"
+            >{{ currentRoom.roomTitle }}</router-link
+          >
+        </div>
+        <div class="button-container" title="Выйти из звонка">
           <HangPhoneIcon @click="handleLeaveCall"></HangPhoneIcon>
         </div>
       </div>
@@ -81,7 +92,7 @@ const handleLeaveCall = () => {
   display: flex;
   justify-content: center;
   left: 87px;
-  bottom: 50px;
+  bottom: 58px;
   color: white;
 }
 .voice-chat-menu-container {
@@ -96,16 +107,49 @@ const handleLeaveCall = () => {
   align-items: center;
   justify-content: center;
   background-color: black;
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   border-radius: 5px;
 }
 .row1,
 .row2 {
   display: flex;
 }
+
+.row2 button {
+  outline: none;
+  border: 1px solid white;
+  background-color: black;
+  color: white;
+  border-radius: 5px;
+  font-size: 15px;
+  cursor: pointer;
+  padding: 5px 5px 5px 5px;
+}
+
 .row1 {
   width: 100%;
-  justify-content: flex-end;
+  justify-content: space-between;
+}
+.row1 p {
+  margin-top: 0;
+  margin-bottom: 0;
+  font-weight: 500;
+}
+.row1 .button-container {
+  justify-self: flex-end;
+}
+.connection-state-connected {
+  color: darkgreen;
+}
+.connection-state-connecting {
+  color: chocolate;
+}
+.current-room-title {
+  text-decoration: none;
+  color: black;
+}
+.current-room-title:hover {
+  text-decoration: underline 1px black solid;
 }
 </style>
