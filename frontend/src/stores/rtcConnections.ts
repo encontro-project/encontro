@@ -247,11 +247,15 @@ export const useConnectionsStore = defineStore('connections', () => {
       if (!e.streams || !(e.streams.length > 0)) {
         return
       }
-      console.log(peerConnections.value[peerUuid].trackMetadata)
-      if (e.streams[0].getAudioTracks().length > 0) {
-        peerConnections.value[peerUuid].microphoneStream = e.streams[0]
-      } else {
+      console.log([...e.streams[0].getTracks()])
+      if (
+        e.streams[0].getVideoTracks().length > 0 ||
+        (e.streams[0].getAudioTracks().length > 0 && e.streams[0].getVideoTracks().length > 0)
+      ) {
+        console.log('got mic track')
         peerConnections.value[peerUuid].ssVideoStream = e.streams[0]
+      } else {
+        peerConnections.value[peerUuid].microphoneStream = e.streams[0]
       }
     }
 
