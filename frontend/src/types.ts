@@ -37,6 +37,8 @@ type TextChat = {
   messages: Message[]
 }
 
+type User = {}
+
 type Message = {
   id: string
   content: string
