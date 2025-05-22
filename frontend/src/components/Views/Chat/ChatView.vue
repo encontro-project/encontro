@@ -4,15 +4,13 @@ import type { ChatInfo, MessagesByDate } from '@/types'
 import MessageInput from '@/components/shared/MessageInput.vue'
 import { onBeforeMount, onMounted, ref, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
-import { getFormatedDate } from '@/helpers/getFormatedDate'
 import { groupByDate } from '@/helpers/groupByDate'
 import { getFormatedTime } from '@/helpers/getFormatedTime'
+import Messages from '@/components/shared/Messages/Messages.vue'
 
 const route = useRoute()
 
 const serverInfoRef = ref<ChatInfo>({ title: '', messages: [] })
-
-const groupedMessages = ref<MessagesByDate>({})
 
 const messagesRef = ref<HTMLDivElement>()
 onBeforeMount(async () => {
@@ -40,7 +38,6 @@ function scrollToBottom() {
 watch(
   serverInfoRef,
   async () => {
-    groupedMessages.value = groupByDate(serverInfoRef.value.messages)
     scrollToBottom()
   },
   { deep: true },
@@ -69,39 +66,7 @@ onMounted(() => {})
           <h1>{{ serverInfoRef.title }}</h1>
         </div>
       </div>
-      <div class="chat-messages">
-        <div
-          class="date-messages"
-          v-for="dateGroup in Object.values(groupedMessages).sort((a, b) => {
-            return a.dateKey > b.dateKey ? -1 : 1
-          })"
-        >
-          <div class="messages-date">
-            <div class="date-border"></div>
-            <p>{{ dateGroup.dateKey }}</p>
-            <div class="date-border"></div>
-          </div>
-          <div
-            class="chat-message"
-            v-for="message in dateGroup.messages.sort((a, b) => {
-              return a.timestamp < b.timestamp ? -1 : 1
-            })"
-          >
-            <img src="https://masterpiecer-images.s3.yandex.net/5fcb1cda5223d2d:upscaled" alt="" />
-            <div class="message-container">
-              <div class="message-header">
-                <p class="message-username">Обезьянка</p>
-                <p class="message-timestamp">
-                  {{ getFormatedTime(message.timestamp) }}
-                </p>
-              </div>
-              <p>
-                {{ message.text }}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <Messages :messages="serverInfoRef.messages"></Messages>
     </div>
     <MessageInput post-url=""></MessageInput>
   </div>
@@ -160,76 +125,5 @@ onMounted(() => {})
   margin-bottom: 3px;
   font-size: 20px;
   color: white;
-}
-.chat-messages {
-  margin: 0 auto;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  width: 97%;
-  align-self: center;
-}
-.chat-messages .chat-message {
-  margin-top: 20px;
-  white-space: pre-wrap;
-  display: flex;
-  gap: 15px;
-  color: white;
-
-  font-size: 20px;
-}
-
-.chat-message img {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-}
-
-.message-timestamp {
-  color: #6c6c6c;
-}
-
-.messages-date {
-  color: white;
-  font-size: 16px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  width: 100%;
-  gap: 10px;
-  text-align: center;
-}
-.messages-date p {
-  display: inline-block;
-  white-space: nowrap;
-  flex: 0 0 auto;
-  margin-top: 0;
-  margin-bottom: 2px;
-}
-.date-border {
-  flex: 1;
-  background-color: white;
-  height: 1px;
-  width: calc(50% - 40px);
-}
-
-.message-container {
-  /*   display: flex;
-  flex-direction: column;
-  gap: 10px;
- */
-}
-
-.message-header {
-  display: flex;
-  gap: 10px;
-}
-.message-header p {
-  margin-top: 0;
-  margin-bottom: 0;
-}
-.message-container p {
-  margin-top: 10px;
 }
 </style>
