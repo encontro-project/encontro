@@ -25,31 +25,24 @@ func main() {
 
 	// Инициализация репозитория и use case для комнат
 	repoConfig := inmemRepo.NewInMemoryConfig(false)
-	roomRepo := inmemRepo.NewInMemoryRoomRepository(repoConfig)
+	roomRepo, err := inmemRepo.NewInMemoryRoomRepository(repoConfig)
+	if err != nil {
+		log.Fatalf("Failed to create room repository: %v", err)
+	}
 	uuidGen := service.NewGoogleUUIDGenerator()
 	roomUseCase := usecase.NewRoomUseCase(roomRepo, uuidGen)
 
 	// Инициализация WebSocket обработчика
 	wsHandler := websocket.NewHandler(roomUseCase)
 
-	// Настройка конфигурации сервера
-	config := server.DefaultConfig()
-	config.AllowMethods = []string{"GET", "OPTIONS"} // Только GET для WebSocket
+	// Настройка конфигурации signaling сервера
+	signalingConfig := server.DefaultSignalingConfig()
 
 	// Настройка маршрутизатора
-	router := server.NewRouter(config)
+	router := server.NewSignalingRouter(signalingConfig)
 
-	// API группа
-	api := router.Group("/api")
-	{
-		// WebSocket endpoint
-		api.GET("/ws/:room", wsHandler.HandleWebSocket)
-	}
-
-	// Обработка статики
-
-	// Крашит с: panic: catch-all wildcard '*filepath' in new path '/*filepath' conflicts with existing path segment 'api' in existing prefix '/api'
-	// router.Static("/", "./static")
+	// WebSocket endpoint
+	router.GET("/api/ws/:room", wsHandler.HandleWebSocket)
 
 	// Пути к сертификатам
 	certFile := filepath.Join(certPath, "localhost+2.pem")

@@ -23,29 +23,42 @@ func NewPostgresMessageRepository(db *database.Pool) repository.MessageRepositor
 	}
 }
 
-// CreateMessage сохраняет новое сообщение
-func (r *PostgresMessageRepository) CreateMessage(ctx context.Context, msg *entity.Message) error {
+// Create сохраняет новое сообщение
+func (r *PostgresMessageRepository) Create(ctx context.Context, msg *entity.Message) error {
 	query := `
 		INSERT INTO messages (id, room_id, content, sender_id, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		VALUES ($1, $2, $3, $4, $5, $5)
 		RETURNING id, room_id, content, sender_id, created_at, updated_at`
 
+	msg.UpdatedAt = msg.CreatedAt // Устанавливаем updated_at равным created_at при создании
+
 	err := r.db.WithTransaction(ctx, func(ctx context.Context) error {
-		return r.db.GetPool().QueryRow(ctx, query,
+		row := r.db.GetPool().QueryRow(ctx, query,
 			msg.ID,
 			msg.RoomID,
 			msg.Content,
 			msg.SenderID,
 			msg.CreatedAt,
-			msg.UpdatedAt,
-		).Scan(
-			&msg.ID,
-			&msg.RoomID,
-			&msg.Content,
-			&msg.SenderID,
-			&msg.CreatedAt,
-			&msg.UpdatedAt,
 		)
+
+		var returnedMsg entity.Message
+		if err := row.Scan(
+			&returnedMsg.ID,
+			&returnedMsg.RoomID,
+			&returnedMsg.Content,
+			&returnedMsg.SenderID,
+			&returnedMsg.CreatedAt,
+			&returnedMsg.UpdatedAt,
+		); err != nil {
+			return fmt.Errorf("ошибка сканирования созданного сообщения: %w", err)
+		}
+
+		// Обновляем поля сообщения из базы данных
+		msg.RoomID = returnedMsg.RoomID
+		msg.SenderID = returnedMsg.SenderID
+		msg.UpdatedAt = returnedMsg.UpdatedAt
+
+		return nil
 	})
 
 	if err != nil {
@@ -55,8 +68,8 @@ func (r *PostgresMessageRepository) CreateMessage(ctx context.Context, msg *enti
 	return nil
 }
 
-// GetMessageByID возвращает сообщение по ID
-func (r *PostgresMessageRepository) GetMessageByID(ctx context.Context, id string) (*entity.Message, error) {
+// GetByID возвращает сообщение по ID
+func (r *PostgresMessageRepository) GetByID(ctx context.Context, id string) (*entity.Message, error) {
 	query := `
 		SELECT id, room_id, content, sender_id, created_at, updated_at
 		FROM messages
@@ -82,14 +95,13 @@ func (r *PostgresMessageRepository) GetMessageByID(ctx context.Context, id strin
 	return &msg, nil
 }
 
-// GetMessagesByRoomID возвращает пагинированный список сообщений для комнаты
-func (r *PostgresMessageRepository) GetMessagesByRoomID(ctx context.Context, roomID string, params entity.PaginationParams) ([]*entity.Message, int64, error) {
-	// Получаем общее количество сообщений в комнате
-	var total int64
-	countQuery := `SELECT COUNT(*) FROM messages WHERE room_id = $1`
-	err := r.db.GetPool().QueryRow(ctx, countQuery, roomID).Scan(&total)
-	if err != nil {
-		return nil, 0, fmt.Errorf("ошибка подсчета сообщений: %w", err)
+// ListByRoomID возвращает список сообщений в комнате с пагинацией
+func (r *PostgresMessageRepository) ListByRoomID(ctx context.Context, roomID string, page, pageSize int) ([]*entity.Message, error) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = 20
 	}
 
 	// Получаем пагинированный список сообщений
@@ -100,10 +112,10 @@ func (r *PostgresMessageRepository) GetMessagesByRoomID(ctx context.Context, roo
 		ORDER BY created_at DESC
 		LIMIT $2 OFFSET $3`
 
-	offset := (params.Page - 1) * params.PageSize
-	rows, err := r.db.GetPool().Query(ctx, query, roomID, params.PageSize, offset)
+	offset := (page - 1) * pageSize
+	rows, err := r.db.GetPool().Query(ctx, query, roomID, pageSize, offset)
 	if err != nil {
-		return nil, 0, fmt.Errorf("ошибка получения списка сообщений: %w", err)
+		return nil, fmt.Errorf("ошибка получения списка сообщений: %w", err)
 	}
 	defer rows.Close()
 
@@ -118,20 +130,20 @@ func (r *PostgresMessageRepository) GetMessagesByRoomID(ctx context.Context, roo
 			&msg.CreatedAt,
 			&msg.UpdatedAt,
 		); err != nil {
-			return nil, 0, fmt.Errorf("ошибка сканирования сообщения: %w", err)
+			return nil, fmt.Errorf("ошибка сканирования сообщения: %w", err)
 		}
 		messages = append(messages, &msg)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, 0, fmt.Errorf("ошибка при итерации по сообщениям: %w", err)
+		return nil, fmt.Errorf("ошибка при итерации по сообщениям: %w", err)
 	}
 
-	return messages, total, nil
+	return messages, nil
 }
 
-// DeleteMessage удаляет сообщение по ID
-func (r *PostgresMessageRepository) DeleteMessage(ctx context.Context, id string) error {
+// Delete удаляет сообщение по ID
+func (r *PostgresMessageRepository) Delete(ctx context.Context, id string) error {
 	query := `DELETE FROM messages WHERE id = $1`
 
 	result, err := r.db.GetPool().Exec(ctx, query, id)
@@ -144,4 +156,58 @@ func (r *PostgresMessageRepository) DeleteMessage(ctx context.Context, id string
 	}
 
 	return nil
+}
+
+// DeleteByRoomID удаляет все сообщения в комнате
+func (r *PostgresMessageRepository) DeleteByRoomID(ctx context.Context, roomID string) error {
+	query := `DELETE FROM messages WHERE room_id = $1`
+
+	_, err := r.db.GetPool().Exec(ctx, query, roomID)
+	if err != nil {
+		return fmt.Errorf("ошибка удаления сообщений комнаты: %w", err)
+	}
+
+	return nil
+}
+
+// Update обновляет сообщение
+func (r *PostgresMessageRepository) Update(ctx context.Context, message *entity.Message) error {
+	query := `
+		UPDATE messages 
+		SET content = $1, updated_at = $2
+		WHERE id = $3
+		RETURNING id, room_id, content, sender_id, created_at, updated_at`
+
+	err := r.db.GetPool().QueryRow(ctx, query,
+		message.Content,
+		message.UpdatedAt,
+		message.ID,
+	).Scan(
+		&message.ID,
+		&message.RoomID,
+		&message.Content,
+		&message.SenderID,
+		&message.CreatedAt,
+		&message.UpdatedAt,
+	)
+
+	if err == pgx.ErrNoRows {
+		return fmt.Errorf("сообщение с ID %s не найдено", message.ID)
+	}
+	if err != nil {
+		return fmt.Errorf("ошибка обновления сообщения: %w", err)
+	}
+
+	return nil
+}
+
+// CountByRoomID возвращает общее количество сообщений в комнате
+func (r *PostgresMessageRepository) CountByRoomID(ctx context.Context, roomID string) (int64, error) {
+	query := `SELECT COUNT(*) FROM messages WHERE room_id = $1`
+	var count int64
+	err := r.db.GetPool().QueryRow(ctx, query, roomID).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("ошибка подсчета сообщений: %w", err)
+	}
+	return count, nil
 }

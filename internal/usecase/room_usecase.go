@@ -33,52 +33,47 @@ func (uc *RoomUseCase) CreateRoom(ctx context.Context, name string) (*entity.Roo
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
-	return uc.repo.CreateRoom(ctx, room)
+	err := uc.repo.Create(ctx, room)
+	if err != nil {
+		return nil, err
+	}
+	return room, nil
 }
 
 // GetRoom возвращает комнату по ID
 func (uc *RoomUseCase) GetRoom(ctx context.Context, id string) (*entity.Room, error) {
-	return uc.repo.GetRoom(ctx, id)
+	return uc.repo.GetByID(ctx, id)
 }
 
 // GetRooms возвращает пагинированный список комнат
 func (uc *RoomUseCase) GetRooms(ctx context.Context, params entity.PaginationParams) (entity.PaginatedResponse[*entity.Room], error) {
-	rooms, total, err := uc.repo.GetRooms(ctx, params)
+	rooms, err := uc.repo.List(ctx, params.Page, params.PageSize)
 	if err != nil {
 		return entity.PaginatedResponse[*entity.Room]{}, err
 	}
 
+	// TODO: получить общее количество комнат
+	total := int64(len(rooms))
 	return entity.NewPaginatedResponse(rooms, total, params), nil
 }
 
 // ListRooms возвращает список всех комнат
 func (uc *RoomUseCase) ListRooms(ctx context.Context) ([]*entity.Room, error) {
-	return uc.repo.ListRooms(ctx)
+	return uc.repo.List(ctx, 1, 1000) // TODO: заменить на более элегантное решение
 }
 
 // DeleteRoom удаляет комнату по ID
 func (uc *RoomUseCase) DeleteRoom(ctx context.Context, id string) error {
-	return uc.repo.DeleteRoom(ctx, id)
+	return uc.repo.Delete(ctx, id)
 }
 
 // AddClientToRoom добавляет клиента в комнату
 func (uc *RoomUseCase) AddClientToRoom(ctx context.Context, roomID string, client *entity.Client) error {
-	room, err := uc.repo.GetRoom(ctx, roomID)
-	if err != nil {
-		return err
-	}
 	client.ID = uc.uuidGen.Generate()
-	client.RoomID = roomID
-	room.AddClient(client)
-	return uc.repo.UpdateRoom(ctx, room)
+	return uc.repo.AddClient(ctx, roomID, client)
 }
 
 // RemoveClientFromRoom удаляет клиента из комнаты
 func (uc *RoomUseCase) RemoveClientFromRoom(ctx context.Context, roomID, clientID string) error {
-	room, err := uc.repo.GetRoom(ctx, roomID)
-	if err != nil {
-		return err
-	}
-	room.RemoveClient(clientID)
-	return uc.repo.UpdateRoom(ctx, room)
+	return uc.repo.RemoveClient(ctx, roomID, clientID)
 }

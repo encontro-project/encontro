@@ -17,7 +17,7 @@ type InMemoryRoomRepository struct {
 }
 
 // NewInMemoryRoomRepository создает новый экземпляр InMemoryRoomRepository
-func NewInMemoryRoomRepository(cfg *InMemoryConfig) repository.RoomRepository {
+func NewInMemoryRoomRepository(cfg *InMemoryConfig) (repository.RoomRepository, error) {
 	repo := &InMemoryRoomRepository{
 		rooms: make(map[string]*entity.Room),
 	}
@@ -30,7 +30,7 @@ func NewInMemoryRoomRepository(cfg *InMemoryConfig) repository.RoomRepository {
 		}
 	}
 
-	return repo
+	return repo, nil
 }
 
 // CreateRoom создает новую комнату
@@ -46,8 +46,8 @@ func (r *InMemoryRoomRepository) CreateRoom(ctx context.Context, room *entity.Ro
 	return room, nil
 }
 
-// GetRoom возвращает комнату по ID
-func (r *InMemoryRoomRepository) GetRoom(ctx context.Context, id string) (*entity.Room, error) {
+// GetByID возвращает комнату по ID
+func (r *InMemoryRoomRepository) GetByID(ctx context.Context, id string) (*entity.Room, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -59,21 +59,44 @@ func (r *InMemoryRoomRepository) GetRoom(ctx context.Context, id string) (*entit
 	return room, nil
 }
 
-// ListRooms возвращает список всех комнат
-func (r *InMemoryRoomRepository) ListRooms(ctx context.Context) ([]*entity.Room, error) {
+// List возвращает список всех комнат с пагинацией
+func (r *InMemoryRoomRepository) List(ctx context.Context, page, pageSize int) ([]*entity.Room, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
+
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = 20
+	}
 
 	rooms := make([]*entity.Room, 0, len(r.rooms))
 	for _, room := range r.rooms {
 		rooms = append(rooms, room)
 	}
 
-	return rooms, nil
+	// Сортируем по времени создания (от новых к старым)
+	sort.Slice(rooms, func(i, j int) bool {
+		return rooms[i].CreatedAt.After(rooms[j].CreatedAt)
+	})
+
+	start := (page - 1) * pageSize
+	end := start + pageSize
+
+	if start >= len(rooms) {
+		return []*entity.Room{}, nil
+	}
+
+	if end > len(rooms) {
+		end = len(rooms)
+	}
+
+	return rooms[start:end], nil
 }
 
-// UpdateRoom обновляет существующую комнату
-func (r *InMemoryRoomRepository) UpdateRoom(ctx context.Context, room *entity.Room) error {
+// Update обновляет существующую комнату
+func (r *InMemoryRoomRepository) Update(ctx context.Context, room *entity.Room) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -85,8 +108,8 @@ func (r *InMemoryRoomRepository) UpdateRoom(ctx context.Context, room *entity.Ro
 	return nil
 }
 
-// DeleteRoom удаляет комнату по ID
-func (r *InMemoryRoomRepository) DeleteRoom(ctx context.Context, id string) error {
+// Delete удаляет комнату по ID
+func (r *InMemoryRoomRepository) Delete(ctx context.Context, id string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -127,4 +150,76 @@ func (r *InMemoryRoomRepository) GetRooms(ctx context.Context, params entity.Pag
 	}
 
 	return rooms[start:end], total, nil
+}
+
+// AddClient добавляет клиента в комнату
+func (r *InMemoryRoomRepository) AddClient(ctx context.Context, roomID string, client *entity.Client) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	room, exists := r.rooms[roomID]
+	if !exists {
+		return fmt.Errorf("room with ID %s not found", roomID)
+	}
+
+	if room.Clients == nil {
+		room.Clients = make([]*entity.Client, 0)
+	}
+	room.Clients = append(room.Clients, client)
+	return nil
+}
+
+// Create создает новую комнату
+func (r *InMemoryRoomRepository) Create(ctx context.Context, room *entity.Room) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if _, exists := r.rooms[room.ID]; exists {
+		return fmt.Errorf("room with ID %s already exists", room.ID)
+	}
+
+	r.rooms[room.ID] = room
+	return nil
+}
+
+// GetClients возвращает список клиентов в комнате
+func (r *InMemoryRoomRepository) GetClients(ctx context.Context, roomID string) ([]*entity.Client, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	room, exists := r.rooms[roomID]
+	if !exists {
+		return nil, fmt.Errorf("room with ID %s not found", roomID)
+	}
+
+	if room.Clients == nil {
+		return []*entity.Client{}, nil
+	}
+
+	return room.Clients, nil
+}
+
+// RemoveClient удаляет клиента из комнаты
+func (r *InMemoryRoomRepository) RemoveClient(ctx context.Context, roomID string, clientID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	room, exists := r.rooms[roomID]
+	if !exists {
+		return fmt.Errorf("room with ID %s not found", roomID)
+	}
+
+	if room.Clients == nil {
+		return nil
+	}
+
+	// Ищем и удаляем клиента
+	for i, client := range room.Clients {
+		if client.ID == clientID {
+			room.Clients = append(room.Clients[:i], room.Clients[i+1:]...)
+			return nil
+		}
+	}
+
+	return nil
 }

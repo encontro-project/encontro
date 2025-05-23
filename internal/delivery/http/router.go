@@ -2,13 +2,19 @@ package http
 
 import (
 	"encontro/internal/delivery/http/middleware"
+	"encontro/internal/delivery/websocket"
 	"encontro/internal/usecase"
 
 	"github.com/gin-gonic/gin"
 )
 
 // SetupRouter настраивает маршруты приложения
-func SetupRouter(roomUseCase *usecase.RoomUseCase, messageUseCase *usecase.MessageUseCase) *gin.Engine {
+func SetupRouter(
+	roomUseCase *usecase.RoomUseCase,
+	messageUseCase *usecase.MessageUseCase,
+	userUseCase *usecase.UserSummaryUseCase,
+	wsHandler *websocket.Handler,
+) *gin.Engine {
 	router := gin.Default()
 
 	// Middleware
@@ -16,9 +22,15 @@ func SetupRouter(roomUseCase *usecase.RoomUseCase, messageUseCase *usecase.Messa
 	router.Use(middleware.Logger())
 	router.Use(middleware.Recovery())
 
+	// Обработка OPTIONS-запросов для всех путей
+	router.OPTIONS("/*path", func(c *gin.Context) {
+		c.Status(204)
+	})
+
 	// Хендлеры
 	roomHandler := NewRoomHandler(roomUseCase)
 	messageHandler := NewMessageHandler(messageUseCase)
+	userHandler := NewUserSummaryHandler(userUseCase)
 
 	// API v1
 	v1 := router.Group("/api/v1")
@@ -33,14 +45,25 @@ func SetupRouter(roomUseCase *usecase.RoomUseCase, messageUseCase *usecase.Messa
 		}
 
 		// Маршруты для сообщений
-		messages := v1.Group("/rooms/:roomId/messages")
+		messages := v1.Group("/messages")
 		{
 			messages.POST("", messageHandler.CreateMessage)
-			messages.GET("", messageHandler.GetMessages) // Новый маршрут для пагинированного списка
-			messages.GET("/:id", messageHandler.GetMessage)
-			messages.DELETE("/:id", messageHandler.DeleteMessage)
+			messages.GET("", messageHandler.GetMessages)
+			messages.GET("/:messageId", messageHandler.GetMessage)
+			messages.PUT("/:messageId", messageHandler.UpdateMessage)
+			messages.DELETE("/:messageId", messageHandler.DeleteMessage)
+		}
+
+		// Маршруты для пользователей
+		users := v1.Group("/user")
+		{
+			users.Use(middleware.UserIDMiddleware())
+			users.GET("/:id", userHandler.GetUserSummary)
 		}
 	}
+
+	// WebSocket маршрут (без версионирования)
+	router.GET("/api/ws/:room", wsHandler.HandleWebSocket)
 
 	return router
 }

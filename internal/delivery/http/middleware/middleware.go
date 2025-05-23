@@ -3,7 +3,9 @@ package middleware
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -28,11 +30,32 @@ func UserIDMiddleware() gin.HandlerFunc {
 
 // CORS middleware для обработки CORS-запросов
 func CORS() gin.HandlerFunc {
+	// Получаем разрешенные origins из переменной окружения или используем значение по умолчанию
+	allowedOrigins := os.Getenv("ALLOWED_ORIGINS")
+	if allowedOrigins == "" {
+		allowedOrigins = "http://localhost:5173,http://localhost:5174,http://localhost:5175,https://localhost:5173,https://localhost:5174,https://localhost:5175"
+	}
+	origins := strings.Split(allowedOrigins, ",")
+
 	return func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
+		origin := c.Request.Header.Get("Origin")
+
+		// Проверяем, разрешен ли origin
+		allowed := false
+		for _, o := range origins {
+			if o == origin {
+				allowed = true
+				break
+			}
+		}
+
+		if allowed {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+			c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+			c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+			c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
+			c.Writer.Header().Set("Access-Control-Max-Age", "86400") // 24 часа
+		}
 
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)

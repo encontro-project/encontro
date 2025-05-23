@@ -24,8 +24,8 @@ func NewPostgresRoomRepository(db *database.Pool) repository.RoomRepository {
 	}
 }
 
-// CreateRoom создает новую комнату
-func (r *PostgresRoomRepository) CreateRoom(ctx context.Context, room *entity.Room) (*entity.Room, error) {
+// Create создает новую комнату
+func (r *PostgresRoomRepository) Create(ctx context.Context, room *entity.Room) error {
 	query := `
 		INSERT INTO rooms (id, name, created_at, updated_at)
 		VALUES ($1, $2, $3, $4)
@@ -46,14 +46,14 @@ func (r *PostgresRoomRepository) CreateRoom(ctx context.Context, room *entity.Ro
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("ошибка создания комнаты: %w", err)
+		return fmt.Errorf("ошибка создания комнаты: %w", err)
 	}
 
-	return room, nil
+	return nil
 }
 
-// GetRoom возвращает комнату по ID
-func (r *PostgresRoomRepository) GetRoom(ctx context.Context, id string) (*entity.Room, error) {
+// GetByID возвращает комнату по ID
+func (r *PostgresRoomRepository) GetByID(ctx context.Context, id string) (*entity.Room, error) {
 	query := `
 		SELECT id, name, created_at, updated_at
 		FROM rooms
@@ -122,14 +122,23 @@ func (r *PostgresRoomRepository) GetRooms(ctx context.Context, params entity.Pag
 	return rooms, total, nil
 }
 
-// ListRooms возвращает список всех комнат
-func (r *PostgresRoomRepository) ListRooms(ctx context.Context) ([]*entity.Room, error) {
+// List возвращает список комнат с пагинацией
+func (r *PostgresRoomRepository) List(ctx context.Context, page, pageSize int) ([]*entity.Room, error) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = 20
+	}
+
 	query := `
 		SELECT id, name, created_at, updated_at
 		FROM rooms
-		ORDER BY created_at DESC`
+		ORDER BY created_at DESC
+		LIMIT $1 OFFSET $2`
 
-	rows, err := r.db.GetPool().Query(ctx, query)
+	offset := (page - 1) * pageSize
+	rows, err := r.db.GetPool().Query(ctx, query, pageSize, offset)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка получения списка комнат: %w", err)
 	}
@@ -156,8 +165,8 @@ func (r *PostgresRoomRepository) ListRooms(ctx context.Context) ([]*entity.Room,
 	return rooms, nil
 }
 
-// UpdateRoom обновляет существующую комнату
-func (r *PostgresRoomRepository) UpdateRoom(ctx context.Context, room *entity.Room) error {
+// Update обновляет существующую комнату
+func (r *PostgresRoomRepository) Update(ctx context.Context, room *entity.Room) error {
 	query := `
 		UPDATE rooms
 		SET name = $1, updated_at = $2
@@ -180,8 +189,8 @@ func (r *PostgresRoomRepository) UpdateRoom(ctx context.Context, room *entity.Ro
 	return nil
 }
 
-// DeleteRoom удаляет комнату по ID
-func (r *PostgresRoomRepository) DeleteRoom(ctx context.Context, id string) error {
+// Delete удаляет комнату по ID
+func (r *PostgresRoomRepository) Delete(ctx context.Context, id string) error {
 	query := `DELETE FROM rooms WHERE id = $1`
 
 	result, err := r.db.GetPool().Exec(ctx, query, id)
@@ -194,4 +203,54 @@ func (r *PostgresRoomRepository) DeleteRoom(ctx context.Context, id string) erro
 	}
 
 	return nil
+}
+
+// AddClient добавляет клиента в комнату
+func (r *PostgresRoomRepository) AddClient(ctx context.Context, roomID string, client *entity.Client) error {
+	query := `
+		INSERT INTO room_clients (room_id, client_id, joined_at)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (room_id, client_id) DO NOTHING`
+
+	_, err := r.db.GetPool().Exec(ctx, query, roomID, client.ID, time.Now())
+	if err != nil {
+		return fmt.Errorf("ошибка добавления клиента в комнату: %w", err)
+	}
+	return nil
+}
+
+// RemoveClient удаляет клиента из комнаты
+func (r *PostgresRoomRepository) RemoveClient(ctx context.Context, roomID string, clientID string) error {
+	query := `DELETE FROM room_clients WHERE room_id = $1 AND client_id = $2`
+	_, err := r.db.GetPool().Exec(ctx, query, roomID, clientID)
+	if err != nil {
+		return fmt.Errorf("ошибка удаления клиента из комнаты: %w", err)
+	}
+	return nil
+}
+
+// GetClients возвращает список клиентов в комнате
+func (r *PostgresRoomRepository) GetClients(ctx context.Context, roomID string) ([]*entity.Client, error) {
+	query := `
+		SELECT client_id, joined_at
+		FROM room_clients
+		WHERE room_id = $1`
+
+	rows, err := r.db.GetPool().Query(ctx, query, roomID)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка получения списка клиентов: %w", err)
+	}
+	defer rows.Close()
+
+	var clients []*entity.Client
+	for rows.Next() {
+		var client entity.Client
+		var joinedAt time.Time
+		if err := rows.Scan(&client.ID, &joinedAt); err != nil {
+			return nil, fmt.Errorf("ошибка сканирования клиента: %w", err)
+		}
+		clients = append(clients, &client)
+	}
+
+	return clients, nil
 }

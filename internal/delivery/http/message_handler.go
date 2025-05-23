@@ -1,11 +1,14 @@
 package http
 
 import (
+	"encontro/internal/delivery/http/dto"
 	"encontro/internal/domain/entity"
 	"encontro/internal/usecase"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // MessageHandler обрабатывает HTTP-запросы для сообщений
@@ -22,32 +25,47 @@ func NewMessageHandler(messageUseCase *usecase.MessageUseCase) *MessageHandler {
 
 // CreateMessage обрабатывает создание нового сообщения
 func (h *MessageHandler) CreateMessage(c *gin.Context) {
-	var req struct {
-		Content string `json:"content" binding:"required"`
-	}
-
+	var req dto.CreateMessageRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body: " + err.Error()})
 		return
 	}
 
-	roomID := c.Param("id")
-	senderID := c.GetString("user_id") // Предполагается, что middleware аутентификации установил user_id
+	// Получаем senderID из заголовка или из тела запроса
+	senderID := c.GetHeader("X-User-ID")
+	if senderID == "" {
+		if req.SenderID != "" {
+			senderID = req.SenderID
+		} else if req.UserID != "" {
+			senderID = req.UserID
+		}
+	}
+	if senderID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user ID is required"})
+		return
+	}
 
-	msg, err := h.messageUseCase.CreateMessage(c.Request.Context(), roomID, req.Content, senderID)
+	msg, err := h.messageUseCase.CreateMessage(c.Request.Context(), req.RoomID, req.Content, senderID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		switch err {
+		case usecase.ErrInvalidInput:
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		case usecase.ErrRoomNotFound:
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		}
 		return
 	}
 
-	c.JSON(http.StatusCreated, msg)
+	c.JSON(http.StatusCreated, mapMessageToResponse(msg))
 }
 
 // GetMessages обрабатывает получение списка сообщений с пагинацией
 func (h *MessageHandler) GetMessages(c *gin.Context) {
 	var params entity.PaginationParams
 	if err := c.ShouldBindQuery(&params); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid pagination parameters: " + err.Error()})
 		return
 	}
 
@@ -59,39 +77,151 @@ func (h *MessageHandler) GetMessages(c *gin.Context) {
 		params.PageSize = 20
 	}
 
-	roomID := c.Param("id")
+	roomID := c.Query("room_id")
+	if roomID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "room ID is required"})
+		return
+	}
+
 	response, err := h.messageUseCase.GetMessagesByRoomID(c.Request.Context(), roomID, params)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		switch err {
+		case usecase.ErrInvalidInput:
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		case usecase.ErrRoomNotFound:
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		}
 		return
 	}
 
 	c.JSON(http.StatusOK, response)
 }
 
+// isValidUUID проверяет, что строка является валидным UUID
+func isValidUUID(u string) bool {
+	_, err := uuid.Parse(u)
+	return err == nil
+}
+
 // GetMessage обрабатывает получение сообщения по ID
 func (h *MessageHandler) GetMessage(c *gin.Context) {
 	id := c.Param("messageId")
-	msg, err := h.messageUseCase.GetMessageByID(c.Request.Context(), id)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	if msg == nil {
+	if id == "" || !isValidUUID(id) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "message not found"})
 		return
 	}
 
-	c.JSON(http.StatusOK, msg)
+	msg, err := h.messageUseCase.GetMessageByID(c.Request.Context(), id)
+	if err != nil {
+		switch err {
+		case usecase.ErrInvalidInput:
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		case usecase.ErrMessageNotFound:
+			c.JSON(http.StatusNotFound, gin.H{"error": "message not found"})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, mapMessageToResponse(msg))
+}
+
+// UpdateMessage обрабатывает обновление сообщения
+func (h *MessageHandler) UpdateMessage(c *gin.Context) {
+	id := c.Param("messageId")
+	if id == "" || !isValidUUID(id) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "message not found"})
+		return
+	}
+
+	var req dto.UpdateMessageRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body: " + err.Error()})
+		return
+	}
+
+	// Получаем существующее сообщение
+	existingMsg, err := h.messageUseCase.GetMessageByID(c.Request.Context(), id)
+	if err != nil {
+		switch err {
+		case usecase.ErrInvalidInput:
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		case usecase.ErrMessageNotFound:
+			c.JSON(http.StatusNotFound, gin.H{"error": "message not found"})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		}
+		return
+	}
+
+	// Обновляем только контент
+	existingMsg.Content = req.Content
+	existingMsg.UpdatedAt = time.Now()
+
+	// Сохраняем обновленное сообщение
+	if err := h.messageUseCase.UpdateMessage(c.Request.Context(), existingMsg); err != nil {
+		switch err {
+		case usecase.ErrInvalidInput:
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		case usecase.ErrMessageNotFound:
+			c.JSON(http.StatusNotFound, gin.H{"error": "message not found"})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		}
+		return
+	}
+
+	// Получаем обновленное сообщение для ответа
+	updatedMsg, err := h.messageUseCase.GetMessageByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get updated message"})
+		return
+	}
+
+	c.JSON(http.StatusOK, mapMessageToResponse(updatedMsg))
 }
 
 // DeleteMessage обрабатывает удаление сообщения
 func (h *MessageHandler) DeleteMessage(c *gin.Context) {
 	id := c.Param("messageId")
+	if id == "" || !isValidUUID(id) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "message not found"})
+		return
+	}
+
+	// Сначала проверяем существование сообщения
+	if _, err := h.messageUseCase.GetMessageByID(c.Request.Context(), id); err != nil {
+		switch err {
+		case usecase.ErrInvalidInput:
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		case usecase.ErrMessageNotFound:
+			c.JSON(http.StatusNotFound, gin.H{"error": "message not found"})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		}
+		return
+	}
+
+	// Затем удаляем его
 	if err := h.messageUseCase.DeleteMessage(c.Request.Context(), id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete message"})
 		return
 	}
 
 	c.Status(http.StatusNoContent)
+}
+
+// mapMessageToResponse преобразует сущность Message в DTO MessageResponse
+func mapMessageToResponse(msg *entity.Message) dto.MessageResponse {
+	return dto.MessageResponse{
+		ID:        msg.ID,
+		Content:   msg.Content,
+		RoomID:    msg.RoomID,
+		SenderID:  msg.SenderID,
+		CreatedAt: msg.CreatedAt.Format(time.RFC3339),
+		UpdatedAt: msg.UpdatedAt.Format(time.RFC3339),
+	}
 }

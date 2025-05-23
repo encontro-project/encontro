@@ -25,7 +25,7 @@ const handleConnectionStart = async (room: string, roomTitle: string, serverId: 
 // Меняем данные в меню при изменении рута на рут с парамсом channelId
 watch(route, async () => {
   if (route.params.channelId) {
-    const response = await fetch(`http://localhost:3000/channel-info/${route.params.channelId}`)
+    const response = await fetch(`https://localhost:8443/api/v1/channels/${route.params.channelId}`)
     menuData.value = await response.json()
   }
 })

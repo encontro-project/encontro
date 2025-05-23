@@ -12,12 +12,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gin-gonic/gin"
-
 	httphandler "encontro/internal/delivery/http"
 	"encontro/internal/delivery/websocket"
 	"encontro/internal/domain/service"
-	inmemRepo "encontro/internal/infrastructure/repository"
+	"encontro/internal/infrastructure/database"
+	postgresRepo "encontro/internal/infrastructure/repository"
 	"encontro/internal/usecase"
 )
 
@@ -36,60 +35,36 @@ func loadTLSConfig() (*tls.Config, error) {
 }
 
 func main() {
-	// Создаем конфигурацию для репозиториев
-	repoConfig := inmemRepo.NewInMemoryConfig(false)
+	// Инициализация базы данных
+	dbConfig := database.NewConfig()
+	dbPool, err := database.NewPool(context.Background(), dbConfig)
+	if err != nil {
+		log.Fatalf("Failed to create database pool: %v", err)
+	}
+	defer dbPool.Close()
 
-	// Инициализация репозитория
-	roomRepo := inmemRepo.NewInMemoryRoomRepository(repoConfig)
+	// Инициализация репозиториев
+	roomRepo := postgresRepo.NewPostgresRoomRepository(dbPool)
+	messageRepo := postgresRepo.NewPostgresMessageRepository(dbPool)
+	userSummaryRepo := postgresRepo.NewPostgresUserSummaryRepository(dbPool.GetPool())
 
 	// Инициализация UUID генератора
 	uuidGen := service.NewGoogleUUIDGenerator()
 
-	// Инициализация usecase для сообщений (messageRepo должен быть создан ранее)
-	messageRepo := inmemRepo.NewInMemoryMessageRepository(repoConfig)
-	messageUseCase := usecase.NewMessageUseCase(messageRepo, uuidGen)
-
 	// Инициализация usecase
+	messageUseCase := usecase.NewMessageUseCase(messageRepo, uuidGen)
 	roomUseCase := usecase.NewRoomUseCase(roomRepo, uuidGen)
+	userUseCase := usecase.NewUserSummaryUseCase(userSummaryRepo)
 
 	// Инициализация обработчиков
 	wsHandler := websocket.NewHandler(roomUseCase)
-	roomHandler := httphandler.NewRoomHandler(roomUseCase)
-
-	// Инициализация обработчика сообщений
-	messageHandler := httphandler.NewMessageHandler(messageUseCase)
 
 	// Настройка маршрутизатора
-	router := gin.Default()
+	router := httphandler.SetupRouter(roomUseCase, messageUseCase, userUseCase, wsHandler)
 
 	// Статические файлы
 	router.Static("/static", "./static")
 	router.StaticFile("/", "./static/index.html")
-
-	// API группа
-	api := router.Group("/api")
-	{
-		// WebSocket endpoint
-		api.GET("/ws/:room", wsHandler.HandleWebSocket)
-
-		// CRUD endpoints для комнат
-		rooms := api.Group("/rooms")
-		{
-			rooms.POST("", roomHandler.CreateRoom)       // POST /api/rooms - создать комнату
-			rooms.GET("", roomHandler.ListRooms)         // GET /api/rooms - список всех комнат
-			rooms.GET("/:id", roomHandler.GetRoom)       // GET /api/rooms/:id - получить комнату по ID
-			rooms.DELETE("/:id", roomHandler.DeleteRoom) // DELETE /api/rooms/:id - удалить комнату
-		}
-
-		// API для сообщений
-		messages := api.Group("/messages")
-		{
-			messages.POST("", messageHandler.CreateMessage)
-			messages.GET("", messageHandler.GetMessages)
-			messages.GET("/:id", messageHandler.GetMessage)
-			messages.DELETE("/:id", messageHandler.DeleteMessage)
-		}
-	}
 
 	// Загрузка TLS конфигурации
 	tlsConfig, err := loadTLSConfig()

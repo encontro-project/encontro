@@ -15,7 +15,7 @@ const serverInfoRef = ref<ChatInfo>({ title: '', messages: [] })
 const messagesRef = ref<HTMLDivElement>()
 onBeforeMount(async () => {
   const data = (await httpClient.get(
-    `http://localhost:3000/chat-info/${route.params.channelViewId}`,
+    `https://localhost:8443/api/v1/channels/${route.params.channelViewId}`,
   )) as ChatInfo
 
   serverInfoRef.value = data
