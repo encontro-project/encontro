@@ -3,6 +3,8 @@ import { useConnectionsStore } from '@/stores/rtcConnections'
 import { useRoomWsStore } from '@/stores/wsConnection'
 import { storeToRefs } from 'pinia'
 import HangPhoneIcon from './Icons/HangPhoneIcon.vue'
+import MicrophoneIcon from '@/components/Icons/MicrophoneIcon.vue'
+import MicrophoneOffIcon from '@/components/Icons/MicrophoneOffIcon.vue'
 
 const rtcConnectionsStore = useConnectionsStore()
 
@@ -10,9 +12,9 @@ const roomWsConnectionStore = useRoomWsStore()
 
 const { getMediaTracks, closeRoomWsConnection } = roomWsConnectionStore
 
-const { leaveCall, updateStream, shareScreen, stopStream } = rtcConnectionsStore
+const { leaveCall, updateStream, shareScreen, stopStream, toggleMicrophone } = rtcConnectionsStore
 const { roomWs, localUuid, isWsConnected, currentRoom } = storeToRefs(roomWsConnectionStore)
-const { peerConnections } = storeToRefs(rtcConnectionsStore)
+const { peerConnections, isMicrophoneOn } = storeToRefs(rtcConnectionsStore)
 
 const getTracks = async () => {
   await getMediaTracks()
@@ -70,8 +72,14 @@ const handleLeaveCall = () => {
             >{{ currentRoom.roomTitle }}</router-link
           >
         </div>
-        <div class="button-container" title="Выйти из звонка">
-          <HangPhoneIcon @click="handleLeaveCall"></HangPhoneIcon>
+        <div class="row1-controls">
+          <div class="button-container">
+            <MicrophoneIcon @click="toggleMicrophone" v-if="isMicrophoneOn"></MicrophoneIcon>
+            <MicrophoneOffIcon @click="toggleMicrophone" v-else></MicrophoneOffIcon>
+          </div>
+          <div class="button-container" title="Выйти из звонка">
+            <HangPhoneIcon @click="handleLeaveCall"></HangPhoneIcon>
+          </div>
         </div>
       </div>
       <div class="row2">
@@ -114,6 +122,11 @@ const handleLeaveCall = () => {
 .row1,
 .row2 {
   display: flex;
+}
+
+.row1-controls {
+  display: flex;
+  gap: 10px;
 }
 
 .row2 button {

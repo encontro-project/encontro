@@ -31,6 +31,8 @@ const {
   leaveCall,
   shareMicrophone,
   setTrackMetadata,
+  handleUserMute,
+  handleUserUnmute,
 } = rtcConnectionsStore
 
 const { fetchUserData } = userDataStore
@@ -52,7 +54,6 @@ const gotMessageFromServer = async (message: MessageEvent) => {
   //Убираем пир из peerConnections на его сообщение о дисконнекте
   if (signal.type === 'peer-disconnect') {
     handlePeerDisconnect(peerUuid)
-
     return
   }
   //Присылаем пиру tracks из демки на его сообщение
@@ -60,6 +61,16 @@ const gotMessageFromServer = async (message: MessageEvent) => {
     if (!peerConnections.value[peerUuid].ssVideoSender) {
       shareScreen(peerUuid)
     }
+    return
+  }
+  if (signal.type == 'user-muted' && signal.dest == 'all' && peerUuid) {
+    handleUserMute(peerUuid)
+    return
+  }
+  console.log(signal)
+  if (signal.type == 'user-unmuted' && signal.dest == 'all' && peerUuid) {
+    handleUserUnmute(peerUuid)
+    return
   }
   //Присылаем пиру track микрофона на его сообщение
   if (signal.type == 'get-microphone' && peerUuid != localUuid.value) {
@@ -72,6 +83,7 @@ const gotMessageFromServer = async (message: MessageEvent) => {
     if (peerConnections.value[peerUuid].ssVideoStream) {
       unsubscribeFromStream(peerUuid)
     }
+    return
   }
   //Ретурним, чтобы не вмешиваться в логику webRTCNegotiation
   if (peerUuid === localUuid.value || (signal.dest !== localUuid.value && signal.dest !== 'all'))

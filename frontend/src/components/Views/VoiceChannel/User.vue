@@ -34,8 +34,8 @@ watch([videoRef, videoStreamRef], ([newVideo, newStream], [oldVideo, oldStream])
     </div>
     <div class="user-info">
       <div class="microphone-status">
-        <MicrophoneIcon class="mic-icon"></MicrophoneIcon>
-        <!-- <MicrophoneOffIcon class="mic-icon"></MicrophoneOffIcon> -->
+        <MicrophoneIcon class="mic-icon" v-if="!peerConnection.isMuted"></MicrophoneIcon>
+        <MicrophoneOffIcon class="mic-icon" v-else></MicrophoneOffIcon>
       </div>
       <div class="display-name">
         {{ props.peerConnection.displayName }}

@@ -24,12 +24,6 @@ const {isWsConnected, localDisplayName, localStream} = storeToRefs(roomWsConnect
 const {  peerConnections, isMicrophoneOn } = storeToRefs(rtcConnectionsStore)
 
 
-
-
-
-
-
-
 watch([localStream, localVideo], ([newStream, newVideo], [oldStream, oldVideo]) => {
   if (newStream) {
     if (newVideo) {

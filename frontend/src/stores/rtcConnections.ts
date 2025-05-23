@@ -26,7 +26,7 @@ export const useConnectionsStore = defineStore('connections', () => {
     storeToRefs(roomWsStore)
 
   const peerConnections = ref<Record<string, PeerConnection>>({})
-  const isMicrophoneOn = ref<boolean>(false)
+  const isMicrophoneOn = ref<boolean>(true)
 
   function handlePeerDisconnect(peerUuid: string) {
     console.log(`Peer ${peerUuid} disconnected`)
@@ -122,8 +122,35 @@ export const useConnectionsStore = defineStore('connections', () => {
     })
   }
 
+  function handleUserMute(peerUuid: string) {
+    peerConnections.value[peerUuid].isMuted = true
+  }
+  function handleUserUnmute(peerUuid: string) {
+    peerConnections.value[peerUuid].isMuted = false
+  }
+
   function toggleMicrophone() {
-    isMicrophoneOn.value ? (isMicrophoneOn.value = false) : (isMicrophoneOn.value = true)
+    if (isMicrophoneOn.value && microphoneStream.value) {
+      microphoneStream.value.getAudioTracks()[0].enabled = false
+      isMicrophoneOn.value = false
+      roomWs.value!.send(
+        JSON.stringify({
+          uuid: localUuid.value,
+          type: 'user-muted',
+          dest: 'all',
+        }),
+      )
+    } else if (microphoneStream.value) {
+      microphoneStream.value.getAudioTracks()[0].enabled = true
+      isMicrophoneOn.value = true
+      roomWs.value!.send(
+        JSON.stringify({
+          uuid: localUuid.value,
+          type: 'user-unmuted',
+          dest: 'all',
+        }),
+      )
+    }
   }
 
   function stopStream() {
@@ -186,11 +213,13 @@ export const useConnectionsStore = defineStore('connections', () => {
       if (microhoneSender) {
         microhoneSender.replaceTrack(microphoneStream.value.getAudioTracks()[0])
       } else {
-        microphoneStream.value?.getTracks().forEach((track) => {
-          peerConnections.value[peerUuid].microphoneSender = peerConnections.value[
-            peerUuid
-          ].pc.addTrack(track, microphoneStream.value as MediaStream)
-        })
+        const track = microphoneStream.value?.getAudioTracks()[0]
+        if (!isMicrophoneOn.value) {
+          track.enabled = false
+        }
+        peerConnections.value[peerUuid].microphoneSender = peerConnections.value[
+          peerUuid
+        ].pc.addTrack(track, microphoneStream.value as MediaStream)
         console.log(peerConnections.value[peerUuid].microphoneSender)
       }
     }
@@ -241,6 +270,8 @@ export const useConnectionsStore = defineStore('connections', () => {
       microphoneStream: null,
       taskQueue: [],
       pc: new RTCPeerConnection(PEER_CONNECTION_CFG),
+      userVolume: 1,
+      isMuted: false,
     }
 
     peerConnection.pc.ontrack = (e) => {
@@ -355,6 +386,8 @@ export const useConnectionsStore = defineStore('connections', () => {
     shareScreen,
     setupPeer,
     handleSdpSignal,
+    handleUserMute,
+    handleUserUnmute,
     handleIceCandidate,
     toggleMicrophone,
     shareMicrophone,

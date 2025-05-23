@@ -13,6 +13,8 @@ export type PeerConnection = {
   ssVideoSender?: RTCRtpSender
   microphoneSender?: RTCRtpSender
   ssAudioTrack?: MediaStreamTrack | null
+  userVolume: number
+  isMuted: boolean
 }
 
 //ss stand for share screen
