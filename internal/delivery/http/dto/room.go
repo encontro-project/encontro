@@ -3,6 +3,7 @@ package dto
 // CreateRoomRequest представляет запрос на создание комнаты
 type CreateRoomRequest struct {
 	Name string `json:"name" validate:"required"`
+	Type string `json:"type" validate:"required,oneof=text voice video"`
 }
 
 // UpdateRoomRequest представляет запрос на обновление комнаты

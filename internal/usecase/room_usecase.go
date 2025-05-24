@@ -24,11 +24,12 @@ func NewRoomUseCase(repo repository.RoomRepository, uuidGen service.UUIDGenerato
 }
 
 // CreateRoom создает новую комнату
-func (uc *RoomUseCase) CreateRoom(ctx context.Context, name string) (*entity.Room, error) {
+func (uc *RoomUseCase) CreateRoom(ctx context.Context, name string, roomType string) (*entity.Room, error) {
 	now := time.Now()
 	room := &entity.Room{
 		ID:        uc.uuidGen.Generate(),
 		Name:      name,
+		Type:      roomType,
 		Clients:   make([]*entity.Client, 0),
 		CreatedAt: now,
 		UpdatedAt: now,

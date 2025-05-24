@@ -27,19 +27,21 @@ func NewPostgresRoomRepository(db *database.Pool) repository.RoomRepository {
 // Create создает новую комнату
 func (r *PostgresRoomRepository) Create(ctx context.Context, room *entity.Room) error {
 	query := `
-		INSERT INTO rooms (id, name, created_at, updated_at)
-		VALUES ($1, $2, $3, $4)
-		RETURNING id, name, created_at, updated_at`
+		INSERT INTO rooms (id, name, type, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id, name, type, created_at, updated_at`
 
 	err := r.db.WithTransaction(ctx, func(ctx context.Context) error {
 		return r.db.GetPool().QueryRow(ctx, query,
 			room.ID,
 			room.Name,
+			room.Type,
 			room.CreatedAt,
 			room.UpdatedAt,
 		).Scan(
 			&room.ID,
 			&room.Name,
+			&room.Type,
 			&room.CreatedAt,
 			&room.UpdatedAt,
 		)
@@ -55,7 +57,7 @@ func (r *PostgresRoomRepository) Create(ctx context.Context, room *entity.Room) 
 // GetByID возвращает комнату по ID
 func (r *PostgresRoomRepository) GetByID(ctx context.Context, id string) (*entity.Room, error) {
 	query := `
-		SELECT id, name, created_at, updated_at
+		SELECT id, name, type, created_at, updated_at
 		FROM rooms
 		WHERE id = $1`
 
@@ -63,6 +65,7 @@ func (r *PostgresRoomRepository) GetByID(ctx context.Context, id string) (*entit
 	err := r.db.GetPool().QueryRow(ctx, query, id).Scan(
 		&room.ID,
 		&room.Name,
+		&room.Type,
 		&room.CreatedAt,
 		&room.UpdatedAt,
 	)
@@ -89,7 +92,7 @@ func (r *PostgresRoomRepository) GetRooms(ctx context.Context, params entity.Pag
 
 	// Получаем пагинированный список комнат
 	query := `
-		SELECT id, name, created_at, updated_at
+		SELECT id, name, type, created_at, updated_at
 		FROM rooms
 		ORDER BY created_at DESC
 		LIMIT $1 OFFSET $2`
@@ -107,6 +110,7 @@ func (r *PostgresRoomRepository) GetRooms(ctx context.Context, params entity.Pag
 		if err := rows.Scan(
 			&room.ID,
 			&room.Name,
+			&room.Type,
 			&room.CreatedAt,
 			&room.UpdatedAt,
 		); err != nil {
@@ -132,7 +136,7 @@ func (r *PostgresRoomRepository) List(ctx context.Context, page, pageSize int) (
 	}
 
 	query := `
-		SELECT id, name, created_at, updated_at
+		SELECT id, name, type, created_at, updated_at
 		FROM rooms
 		ORDER BY created_at DESC
 		LIMIT $1 OFFSET $2`
@@ -150,6 +154,7 @@ func (r *PostgresRoomRepository) List(ctx context.Context, page, pageSize int) (
 		if err := rows.Scan(
 			&room.ID,
 			&room.Name,
+			&room.Type,
 			&room.CreatedAt,
 			&room.UpdatedAt,
 		); err != nil {
@@ -169,12 +174,13 @@ func (r *PostgresRoomRepository) List(ctx context.Context, page, pageSize int) (
 func (r *PostgresRoomRepository) Update(ctx context.Context, room *entity.Room) error {
 	query := `
 		UPDATE rooms
-		SET name = $1, updated_at = $2
-		WHERE id = $3`
+		SET name = $1, type = $2, updated_at = $3
+		WHERE id = $4`
 
 	room.UpdatedAt = time.Now()
 	result, err := r.db.GetPool().Exec(ctx, query,
 		room.Name,
+		room.Type,
 		room.UpdatedAt,
 		room.ID,
 	)
