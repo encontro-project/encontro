@@ -1,6 +1,7 @@
 package http
 
 import (
+	"encontro/internal/delivery/http/dto"
 	"encontro/internal/domain/entity"
 	"encontro/internal/usecase"
 	"net/http"
@@ -22,21 +23,19 @@ func NewRoomHandler(roomUseCase *usecase.RoomUseCase) *RoomHandler {
 // @Summary Создать комнату
 // @Accept json
 // @Produce json
-// @Param name body struct{ Name string `json:"name" binding:"required"` } true "Имя комнаты"
+// @Param request body dto.CreateRoomRequest true "Параметры комнаты"
 // @Success 201 {object} entity.Room
 // @Failure 400 {object} gin.H
 // @Router /rooms [post]
 func (h *RoomHandler) CreateRoom(c *gin.Context) {
-	var req struct {
-		Name string `json:"name" binding:"required"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil || req.Name == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+	var req dto.CreateRoomRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request: " + err.Error()})
 		return
 	}
-	room, err := h.roomUseCase.CreateRoom(c.Request.Context(), req.Name)
+	room, err := h.roomUseCase.CreateRoom(c.Request.Context(), req.Name, req.Type)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "ошибка создания комнаты: " + err.Error()})
 		return
 	}
 	c.JSON(http.StatusCreated, room)
