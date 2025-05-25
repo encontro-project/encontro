@@ -87,7 +87,7 @@ export const useRoomWsStore = defineStore('roomWsStore', () => {
     currentRoom.value.roomId = roomId
     currentRoom.value.roomTitle = roomTitle
     currentRoom.value.serverId = serverId
-    roomWs.value = new WebSocket(`wss://localhost:8444/api/ws/${roomId}`)
+    roomWs.value = new WebSocket(`wss://localhost:8443/ws/${roomId}`)
 
     roomWs.value.onopen = () => {
       roomWs.value!.send(

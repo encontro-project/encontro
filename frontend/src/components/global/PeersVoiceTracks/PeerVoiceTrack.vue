@@ -9,6 +9,8 @@ const props = defineProps<Props>()
 
 const audioStreamRef = toRef(props.peerConnection, 'microphoneStream') // реф для звуковой дорожки
 
+const volumeRef = toRef(props.peerConnection, 'userVolume')
+
 const audioRef = ref<HTMLAudioElement | null>(null) // реф для элемента
 
 watch([audioRef, audioStreamRef], ([newAudio, newStream], [oldAudio, oldStream]) => {
@@ -16,6 +18,13 @@ watch([audioRef, audioStreamRef], ([newAudio, newStream], [oldAudio, oldStream])
   }
   if (newStream && audioRef.value) {
     audioRef.value.srcObject = newStream
+  }
+})
+watch([volumeRef, audioRef], ([newVolume, newAudio], [oldVolume, oldAudio]) => {
+  if (oldVolume) {
+  }
+  if (newAudio && audioRef.value) {
+    audioRef.value.volume = newVolume
   }
 })
 </script>

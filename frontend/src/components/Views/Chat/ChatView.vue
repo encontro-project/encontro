@@ -14,9 +14,9 @@ const serverInfoRef = ref<ChatInfo>({ title: '', messages: [] })
 
 const messagesRef = ref<HTMLDivElement>()
 onBeforeMount(async () => {
-  const data = (await httpClient.get(
-    `https://localhost:8443/api/v1/channels/${route.params.channelViewId}`,
-  )) as ChatInfo
+  // Олег не трогай
+  const response = await fetch(`http://localhost:3000/chat-info/${route.params.channelViewId}/`)
+  const data = (await response.json()) as ChatInfo
 
   serverInfoRef.value = data
   console.log(serverInfoRef.value)

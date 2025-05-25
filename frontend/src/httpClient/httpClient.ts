@@ -2,7 +2,8 @@ import axios from 'axios'
 
 // Create axios instance
 const httpClient = axios.create({
-  baseURL: 'https://localhost:8443/api/v1',
+  //Олег, можно трогать
+  baseURL: 'https://localhost:8080/api/v1',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',

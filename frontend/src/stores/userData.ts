@@ -12,9 +12,11 @@ export const useUserDataStore = defineStore('userData', () => {
   const isLoading = ref<boolean>(true)
 
   async function fetchUserData() {
+    //Олег, можно трогать
     isLoading.value = true
-    const data = (await httpClient.get('/api/user/100')) as ServersResponse
+    const data = (await httpClient.get('/user/100')) as ServersResponse
     userData.value = data
+    console.log(data)
     isLoading.value = false
   }
 

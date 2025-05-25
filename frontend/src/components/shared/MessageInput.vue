@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import httpClient from '@/httpClient/httpClient'
 import { ref, nextTick, onMounted } from 'vue'
+import Textarea from 'primevue/textarea'
 
 interface Props {
   postUrl: string
@@ -8,7 +9,7 @@ interface Props {
 
 const props = defineProps<Props>()
 
-const inputRef = ref<HTMLTextAreaElement>()
+const inputRef = ref<InstanceType<typeof Textarea>>()
 
 const inputValue = ref<string>('')
 
@@ -22,37 +23,15 @@ async function submitMessage() {
     resetInput()
   }
 }
-function adjustHeight(action: 'add-line' | 'remove-line') {
-  nextTick(() => {
-    if (action == 'add-line') {
-      inputRef.value!.style.height = inputRef.value!.scrollHeight + 'px'
-    }
-    if (action == 'remove-line') {
-      inputRef.value!.style.height = parseInt(inputRef.value!.style.height) - 24 + 'px'
-    }
-  })
-}
 
 function resetInput() {
   inputValue.value = ''
-  inputRef.value!.style.height = '24px'
 }
 
 async function handleEnterPress(e: KeyboardEvent) {
-  if (e.shiftKey) {
-    adjustHeight('add-line')
-  } else {
+  if (!e.shiftKey) {
     e.preventDefault()
     await submitMessage()
-  }
-}
-
-function handleBackspacePress() {
-  const textarea = inputRef.value as HTMLTextAreaElement
-  const cursorPos = textarea.selectionStart
-  const text = textarea.value
-  if (text[cursorPos - 1] == '\n') {
-    adjustHeight('remove-line')
   }
 }
 </script>
@@ -60,17 +39,16 @@ function handleBackspacePress() {
 <template>
   <div class="message-input-wrapper">
     <div class="message-input-container">
-      <textarea
+      <Textarea
         rows="1"
-        type="text"
         class="message-input"
         placeholder="смс-очка"
         ref="inputRef"
         @keypress.enter="handleEnterPress"
-        @keydown.delete="handleBackspacePress"
         v-model="inputValue"
+        :auto-resize="true"
       >
-      </textarea>
+      </Textarea>
     </div>
   </div>
 </template>

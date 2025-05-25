@@ -14,12 +14,15 @@ import { useRoute } from 'vue-router'
 
 import { useUserDataStore } from './stores/userData'
 import VoiceChatMenu from './components/global/VoiceChatMenu/VoiceChatMenu.vue'
+import { useContextMenuStore } from './stores/contextMenu'
 
 const rtcConnectionsStore = useConnectionsStore()
 
 const userDataStore = useUserDataStore()
 
 const roomWsConnectionStore = useRoomWsStore()
+
+const contextMenuStore = useContextMenuStore()
 
 const {
   setupPeer,
@@ -35,6 +38,10 @@ const {
   handleUserUnmute,
 } = rtcConnectionsStore
 
+const { isMenuActive } = storeToRefs(contextMenuStore)
+
+const { hideMenu } = contextMenuStore
+
 const { fetchUserData } = userDataStore
 
 const { isLoading, userData } = storeToRefs(userDataStore)
@@ -46,6 +53,8 @@ const { peerConnections } = storeToRefs(rtcConnectionsStore)
 const gotMessageFromServer = async (message: MessageEvent) => {
   const signal = JSON.parse(message.data)
   const peerUuid = signal.uuid
+
+  console.log(signal)
 
   if (!roomWs.value) {
     return
@@ -151,8 +160,8 @@ watch(
 </script>
 
 <template>
-  <!-- <div class="loading-screen" v-if="isLoading">E</div> -->
-  <div>
+  <div class="loading-screen" v-if="isLoading">E</div>
+  <div @click="isMenuActive ? hideMenu() : ''">
     <header>
       <div class="logo">encontro</div>
     </header>

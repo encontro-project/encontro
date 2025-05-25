@@ -74,7 +74,7 @@ func main() {
 
 	// Создание HTTP сервера
 	server := &http.Server{
-		Addr:      ":8443",
+		Addr:      ":8080",
 		Handler:   router,
 		TLSConfig: tlsConfig,
 	}
@@ -85,7 +85,7 @@ func main() {
 
 	// Запуск сервера в отдельной горутине
 	go func() {
-		log.Printf("Starting server at https://localhost:8443")
+		log.Printf("Starting server at https://localhost:8080")
 		log.Printf("Please note:")
 		log.Printf("  * Note the HTTPS in the URL; there is no HTTP -> HTTPS redirect.")
 		log.Printf("  * You'll need to accept the invalid TLS certificate as it is self-signed.")
