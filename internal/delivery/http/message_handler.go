@@ -4,6 +4,7 @@ import (
 	"encontro/internal/delivery/http/dto"
 	"encontro/internal/domain/entity"
 	"encontro/internal/usecase"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -13,11 +14,11 @@ import (
 
 // MessageHandler обрабатывает HTTP-запросы для сообщений
 type MessageHandler struct {
-	messageUseCase *usecase.MessageUseCase
+	messageUseCase MessageUseCaseInterface
 }
 
 // NewMessageHandler создает новый экземпляр MessageHandler
-func NewMessageHandler(messageUseCase *usecase.MessageUseCase) *MessageHandler {
+func NewMessageHandler(messageUseCase MessageUseCaseInterface) *MessageHandler {
 	return &MessageHandler{
 		messageUseCase: messageUseCase,
 	}
@@ -53,7 +54,8 @@ func (h *MessageHandler) CreateMessage(c *gin.Context) {
 		case usecase.ErrRoomNotFound:
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			fmt.Printf("Error creating message: %v\n", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("internal server error: %v", err)})
 		}
 		return
 	}

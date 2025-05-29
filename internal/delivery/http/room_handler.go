@@ -3,7 +3,6 @@ package http
 import (
 	"encontro/internal/delivery/http/dto"
 	"encontro/internal/domain/entity"
-	"encontro/internal/usecase"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -11,11 +10,11 @@ import (
 
 // RoomHandler обрабатывает HTTP-запросы для комнат
 type RoomHandler struct {
-	roomUseCase *usecase.RoomUseCase
+	roomUseCase RoomUseCaseInterface
 }
 
 // NewRoomHandler создает новый экземпляр RoomHandler
-func NewRoomHandler(roomUseCase *usecase.RoomUseCase) *RoomHandler {
+func NewRoomHandler(roomUseCase RoomUseCaseInterface) *RoomHandler {
 	return &RoomHandler{roomUseCase: roomUseCase}
 }
 

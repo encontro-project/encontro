@@ -16,7 +16,7 @@ import (
 	"encontro/internal/delivery/websocket"
 	"encontro/internal/domain/service"
 	"encontro/internal/infrastructure/database"
-	postgresRepo "encontro/internal/infrastructure/repository"
+	postgresRepo "encontro/internal/infrastructure/repository/postgres"
 	"encontro/internal/usecase"
 )
 

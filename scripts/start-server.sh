@@ -9,7 +9,7 @@ export DB_NAME=encontro
 export DB_SSLMODE=require
 
 # Загрузка тестовых данных
-psql "host=$DB_HOST port=$DB_PORT user=$DB_USER password=$DB_PASSWORD dbname=$DB_NAME sslmode=$DB_SSLMODE" -f scripts/testdata.sql
+psql "host=$DB_HOST port=$DB_PORT user=$DB_USER password=$DB_PASSWORD dbname=$DB_NAME sslmode=$DB_SSLMODE" 
 
 # Запуск сервера
 go run cmd/server/main.go 

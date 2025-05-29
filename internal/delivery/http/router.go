@@ -2,18 +2,16 @@ package http
 
 import (
 	"encontro/internal/delivery/http/middleware"
-	"encontro/internal/delivery/websocket"
-	"encontro/internal/usecase"
 
 	"github.com/gin-gonic/gin"
 )
 
 // SetupRouter настраивает маршруты приложения
 func SetupRouter(
-	roomUseCase *usecase.RoomUseCase,
-	messageUseCase *usecase.MessageUseCase,
-	userUseCase *usecase.UserSummaryUseCase,
-	wsHandler *websocket.Handler,
+	roomUseCase RoomUseCaseInterface,
+	messageUseCase MessageUseCaseInterface,
+	userUseCase UserSummaryUseCaseInterface,
+	wsHandler WebSocketHandlerInterface,
 ) *gin.Engine {
 	router := gin.Default()
 
@@ -64,6 +62,11 @@ func SetupRouter(
 
 	// WebSocket маршрут (без версионирования)
 	router.GET("/api/ws/:room", wsHandler.HandleWebSocket)
+
+	// Healthcheck endpoint
+	router.GET("/health", func(c *gin.Context) {
+		c.Status(200)
+	})
 
 	return router
 }

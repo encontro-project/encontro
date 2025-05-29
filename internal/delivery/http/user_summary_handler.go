@@ -4,17 +4,18 @@ import (
 	"net/http"
 
 	"encontro/internal/delivery/http/middleware"
-	"encontro/internal/usecase"
 
 	"github.com/gin-gonic/gin"
 )
 
+// UserSummaryHandler обрабатывает HTTP-запросы для пользователей
 type UserSummaryHandler struct {
-	userUseCase *usecase.UserSummaryUseCase
+	userUseCase UserSummaryUseCaseInterface
 }
 
-func NewUserSummaryHandler(userUC *usecase.UserSummaryUseCase) *UserSummaryHandler {
-	return &UserSummaryHandler{userUseCase: userUC}
+// NewUserSummaryHandler создает новый экземпляр UserSummaryHandler
+func NewUserSummaryHandler(userUseCase UserSummaryUseCaseInterface) *UserSummaryHandler {
+	return &UserSummaryHandler{userUseCase: userUseCase}
 }
 
 func (h *UserSummaryHandler) GetUserSummary(c *gin.Context) {
